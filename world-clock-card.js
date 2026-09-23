@@ -1,7 +1,7 @@
 /**
  * World Clock Card
  * https://github.com/korova-sq/world-clock-card
- * Version: 1.0.0
+ * Version: 1.1.0
  *
  * A clean clock card for Home Assistant: choose a digital or analog clock,
  * an optional localized date, and up to three secondary world-clock time
@@ -46,6 +46,8 @@ class WorldClockCard extends HTMLElement {
     this._config = {
       clock_style: 'digital',
       time_format: '24',
+      digital_style: 'plain', // 'plain' | 'card' (riquadri, solo locale)
+      time_color: null, // colore cifre digitali + indici analogici (ui_color)
       size: 'medium', // 'small' | 'medium' | 'large'
       bold: true,
       dial_detail: 'minutes', // 'quarters' | 'hours' | 'minutes' (solo analogico)
@@ -74,6 +76,9 @@ class WorldClockCard extends HTMLElement {
       background_css: null, // colore/gradiente CSS libero (usato se non c'e' un'immagine)
       light_text: false, // forza testi/indici chiari (utile su sfondi scuri)
       background_overlay: 0,
+      // regolazioni fini di posizione (in em; 0 = default). Servono a centrare
+      // ogni elemento nel suo eventuale riquadro (card-mod) o a compensare il font.
+      h_offset: 0, m_offset: 0, colon_offset: 0, tail_offset: 0,
       ...config,
     };
     if (!Array.isArray(this._config.timezones)) this._config.timezones = [];
@@ -213,7 +218,7 @@ class WorldClockCard extends HTMLElement {
         .wc-tzcol { display: flex; flex-direction: column; gap: 12px; }
 
         /* --- unita' orologio (locale = main, fuso = sub) --- */
-        .wc-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .wc-unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .wc-label {
           font-size: calc(0.78em * var(--wc-scale)); font-weight: 500; letter-spacing: 0.3px;
           color: var(--wc-label-color, var(--secondary-text-color)); text-transform: uppercase;
@@ -221,14 +226,23 @@ class WorldClockCard extends HTMLElement {
 
         /* --- orologio digitale --- */
         .wc-time {
-          font-weight: 700; line-height: 1;
+          font-weight: 700; line-height: 0.67;
           color: var(--wc-time-color, var(--primary-text-color));
           letter-spacing: -1px; text-align: center;
+          display: inline-flex; align-items: stretch; justify-content: center;
         }
         .wc-unit.main .wc-time { font-size: calc(clamp(1.7em, 11vw, 3.4em) * var(--wc-scale)); }
         .wc-unit.sub .wc-time { font-size: calc(clamp(1.1em, 6vw, 1.9em) * var(--wc-scale)); font-weight: 600; }
-        .wc-time .wc-sec { font-size: 0.5em; font-weight: 600; opacity: 0.45; margin-left: 2px; vertical-align: baseline; font-variant-numeric: tabular-nums; }
-        .wc-time .wc-ampm { font-size: 0.34em; font-weight: 600; opacity: 0.7; margin-left: 6px; vertical-align: 0.9em; }
+        .wc-time .wc-h { transform: translateY(var(--wc-h-offset, 0em)); }
+        .wc-time .wc-m { transform: translateY(var(--wc-m-offset, 0em)); }
+        .wc-time .wc-tail { display: grid; grid-template-rows: 1fr 1fr; align-self: stretch; justify-items: start; margin-left: 0.05em; line-height: 1.1; transform: translateY(var(--wc-tail-offset, 0em)); }
+        .wc-time .wc-colon { align-self: center; transform: translateY(calc(-0.14em + var(--wc-colon-offset, 0em))); }
+        /* stile "scheda": riquadri colorati su ore/minuti, due punti col colore del riquadro */
+        .wc-time.is-card .wc-h, .wc-time.is-card .wc-m { background: var(--wc-box-color, #78828c); color: var(--wc-digit-color, inherit); border-radius: 0.2em; padding: 0.3em 0.1em; }
+        .wc-time.is-card .wc-sec, .wc-time.is-card .wc-ampm { color: var(--wc-digit-color, inherit); }
+        .wc-time.is-card .wc-colon { color: var(--wc-box-color, #78828c); padding: 0em 0.02em; }
+        .wc-time .wc-sec { grid-row: 1; align-self: center; font-size: 0.35em; font-weight: 600; opacity: 0.45; font-variant-numeric: tabular-nums; }
+        .wc-time .wc-ampm { grid-row: 2; align-self: center; font-size: 0.34em; font-weight: 600; opacity: 0.7; }
 
         /* --- orologio analogico --- */
         .wc-analog svg { width: 100%; height: 100%; display: block; }
@@ -251,11 +265,11 @@ class WorldClockCard extends HTMLElement {
         .wc-analog .pin { fill: var(--wc-pin-color, var(--primary-color, #03a9f4)); }
         /* auto-contrasto: quadrante scuro -> indici e lancette chiari */
         .wc-analog.dark-face .hand-h,
-        .wc-analog.dark-face .hand-m,
-        .wc-analog.dark-face .tick { stroke: #f3f3f3; }
+        .wc-analog.dark-face .hand-m { stroke: var(--wc-hand-color, #f3f3f3); }
+        .wc-analog.dark-face .tick { stroke: var(--wc-tick-color, #f3f3f3); }
         .wc-analog.dark-face .wc-num,
-        .wc-analog.dark-face .wc-disc-num,
-        .wc-analog.dark-face .wc-dot { fill: #f3f3f3; }
+        .wc-analog.dark-face .wc-disc-num { fill: var(--wc-num-color, #f3f3f3); }
+        .wc-analog.dark-face .wc-dot { fill: var(--wc-tick-color, #f3f3f3); }
         .wc-analog.dark-face .wc-disc { fill: #ffffff; opacity: 0.18; }
 
         .wc-date {
@@ -268,8 +282,8 @@ class WorldClockCard extends HTMLElement {
         .wc-unit.main .wc-date { margin-top: 6px; }
         .wc-unit.main .wc-date.above { margin-top: 0; margin-bottom: 6px; }
         /* data a piena larghezza sopra/sotto la fila (layout riga) */
-        .wc-date-standalone { width: 100%; margin-top: 8px; }
-        .wc-date-standalone.above { margin-top: 0; margin-bottom: 8px; }
+        .wc-date-standalone { width: 100%; margin-top: 4px; }
+        .wc-date-standalone.above { width: 100%; margin-bottom: 4px; }
         /* grassetto disattivato: pesi normali su orario, secondi, data, nomi fusi, titolo */
         ha-card.wc-no-bold .wc-unit .wc-time { font-weight: 400; }
         ha-card.wc-no-bold .wc-time .wc-sec { font-weight: 400; }
@@ -313,18 +327,28 @@ class WorldClockCard extends HTMLElement {
     // grassetto on/off (predefinito on)
     cardEl.classList.toggle('wc-no-bold', c.bold === false);
 
+    // regolazioni fini di posizione (variabili CSS lette dagli elementi dell'orario)
+    [['h', c.h_offset], ['m', c.m_offset], ['colon', c.colon_offset], ['tail', c.tail_offset]]
+      .forEach(([k, v]) => {
+        const n = Number(v);
+        if (n) cardEl.style.setProperty(`--wc-${k}-offset`, `${n}em`);
+        else cardEl.style.removeProperty(`--wc-${k}-offset`);
+      });
+
     // ricostruisci il palco solo quando cambia qualcosa di strutturale
     // (evita di distruggere/ricreare il DOM a ogni set hass)
     const sig = JSON.stringify({
       mode, layout, date: c.show_date !== false,
       datePos: c.date_position || 'below',
+      dstyle: c.digital_style || 'plain',
+      timeColor: c.time_color ? String(c.time_color) : '',
       dateColor: c.date_color ? String(c.date_color) : '',
       detail: c.dial_detail || 'minutes',
       markers: c.dial_markers || 'ticks',
       tzDetail: c.tz_dial_detail || 'inherit',
       tzMarkers: c.tz_dial_markers || 'inherit',
       color: c.dial_color ? String(c.dial_color) : '',
-      tz: tzList.map((z) => [z.label || '', z.tz, z.color ? String(z.color) : '']),
+      tz: tzList.map((z) => [z.label || '', z.tz, z.color ? String(z.color) : '', z.time_color ? String(z.time_color) : '']),
     });
     if (this._sig !== sig) {
       this._sig = sig;
@@ -355,7 +379,7 @@ class WorldClockCard extends HTMLElement {
     const mkSub = (z) => this._buildUnit({
       mode, main: false, tz: z.tz,
       label: z.label || z.tz.split('/').pop().replace(/_/g, ' '),
-      showDate: false, dialColor: z.color,
+      showDate: false, dialColor: z.color, timeColor: z.time_color,
     });
 
     if (layout === 'split') {
@@ -433,14 +457,33 @@ class WorldClockCard extends HTMLElement {
         if (['ticks', 'dots', 'disc', 'numbers', 'roman', 'none'].includes(c.tz_dial_markers)) markers = c.tz_dial_markers;
       }
       const clk = this._buildAnalog(detail, markers, this._toColor(opts.dialColor));
+      // "Colore orario" colora tacche/punti/numeri (non il quadrante, non le lancette):
+      // il locale usa l'impostazione globale, i fusi la propria (se impostata)
+      const tcol = this._toColor(main ? this._config.time_color : opts.timeColor);
+      if (tcol) {
+        clk.style.setProperty('--wc-tick-color', tcol);
+        clk.style.setProperty('--wc-num-color', tcol);
+      }
       unit.appendChild(clk);
       u.hands = clk._hands;
     } else {
       const t = document.createElement('div');
       t.className = 'wc-time';
-      // nel digitale il "colore quadrante" colora le cifre dell'orario
       const col = this._toColor(opts.dialColor);
-      if (col) t.style.color = col;
+      const tcol = this._toColor(main ? this._config.time_color : opts.timeColor);
+      // stile "scheda" (solo locale): riquadri colorati su ore/minuti (Colore quadrante),
+      // due punti/cifre/secondi/AM col "Colore orario"
+      if (main && this._config.digital_style === 'card') {
+        t.classList.add('is-card');
+        if (col) t.style.setProperty('--wc-box-color', col);
+        if (tcol) t.style.setProperty('--wc-digit-color', tcol);
+      } else if (tcol) {
+        // stile normale: "Colore orario" (locale o del fuso) colora le cifre
+        t.style.color = tcol;
+      } else if (!main && col) {
+        // fuso senza "Colore orario" proprio: ripiega sul suo colore quadrante (retro-compatibilita')
+        t.style.color = col;
+      }
       unit.appendChild(t);
       u.timeEl = t;
     }
@@ -745,11 +788,21 @@ class WorldClockCard extends HTMLElement {
             if (p.type === 'second') { sec += p.value; continue; }
             // scarta il ":" che precede i secondi — restano solo le cifre, piccole
             if (p.type === 'literal' && parts[i + 1] && parts[i + 1].type === 'second') { continue; }
+            // scarta lo spazio che precede AM/PM (gestito a parte nel tail)
+            if (p.type === 'literal' && parts[i + 1] && parts[i + 1].type === 'dayPeriod') { continue; }
+            // ore, minuti e ":" come elementi separati (ganci per card-mod)
+            if (p.type === 'hour') { main += `<span class="wc-h">${p.value}</span>`; continue; }
+            if (p.type === 'minute') { main += `<span class="wc-m">${p.value}</span>`; continue; }
+            if (p.type === 'literal' && p.value.indexOf(':') !== -1) { main += `<span class="wc-colon">${p.value}</span>`; continue; }
             main += p.value;
           }
-          u.timeEl.innerHTML = `${main.trim()}`
-            + (sec ? `<span class="wc-sec">${sec}</span>` : '')
-            + (ampm ? `<span class="wc-ampm">${ampm}</span>` : '');
+          const tail = (ampm || sec)
+            ? `<span class="wc-tail">`
+              + (sec ? `<span class="wc-sec">${sec}</span>` : '')
+              + (ampm ? `<span class="wc-ampm">${ampm}</span>` : '')
+              + `</span>`
+            : '';
+          u.timeEl.innerHTML = main + tail;
         } catch (e) {
           u.timeEl.textContent = '—';
         }
@@ -804,7 +857,9 @@ customElements.define('world-clock-card', WorldClockCard);
 const WCC_EDITOR_I18N = {
   en: {
     grp_general: 'General', grp_timezones: 'World clocks', grp_appearance: 'Appearance',
-    grp_clock: 'Clock', grp_dial: 'Dial (analog)', grp_datetime: 'Time & date',
+    grp_clock: 'Clock', grp_dial: 'Dial (analog)', grp_datetime: 'Time & date', grp_fine: 'Element position', grp_dial_digital: 'Dial (digital)',
+    digital_style: 'Digital style', ds_plain: 'Normal', ds_card: 'Boxes',
+    pos_hours: 'Hours position', pos_minutes: 'Minutes position', pos_colon: 'Colon position', pos_tail: 'Seconds / AM-PM position',
     title: 'Title (optional)',
     clock_style: 'Clock style', cs_digital: 'Digital', cs_analog: 'Analog',
     layout: 'Layout', lay_column: 'Local on top, zones below', lay_row: 'In a row, local at center', lay_split: 'Local left, zones right',
@@ -813,7 +868,7 @@ const WCC_EDITOR_I18N = {
     dial_detail: 'Dial detail', dd_quarters: 'Quarters (12·3·6·9)', dd_hours: 'Hours', dd_minutes: 'Full (minutes)',
     dial_markers: 'Markers', dm_ticks: 'Ticks', dm_dots: 'Dots', dm_numbers: 'Numbers', dm_roman: 'Roman numerals', dm_none: 'None (minimal)',
     dm_disc: 'Numbers in circles',
-    dial_color: 'Dial color',
+    dial_color: 'Dial color', time_color: 'Time color',
     time_format: 'Time format', tf_24: '24 hours', tf_12: '12 hours (AM/PM)',
     show_seconds: 'Show seconds', show_date: 'Show date',
     tz_seconds: 'Show seconds on zones',
@@ -835,7 +890,9 @@ const WCC_EDITOR_I18N = {
   },
   it: {
     grp_general: 'Generale', grp_timezones: 'Orologi del mondo', grp_appearance: 'Aspetto',
-    grp_clock: 'Orologio', grp_dial: 'Quadrante (analogico)', grp_datetime: 'Ora e data',
+    grp_clock: 'Orologio', grp_dial: 'Quadrante (analogico)', grp_datetime: 'Ora e data', grp_fine: 'Posizione elementi', grp_dial_digital: 'Quadrante (digitale)',
+    digital_style: 'Stile digitale', ds_plain: 'Normale', ds_card: 'Schede',
+    pos_hours: 'Posizione ore', pos_minutes: 'Posizione minuti', pos_colon: 'Posizione due punti', pos_tail: 'Posizione secondi / AM-PM',
     title: 'Titolo (opzionale)',
     clock_style: 'Stile orologio', cs_digital: 'Digitale', cs_analog: 'Analogico',
     layout: 'Disposizione', lay_column: 'Locale sopra, fusi sotto', lay_row: 'In fila, locale al centro', lay_split: 'Locale a sinistra, fusi a destra',
@@ -844,7 +901,7 @@ const WCC_EDITOR_I18N = {
     dial_detail: 'Dettaglio quadrante', dd_quarters: 'Quarti (12·3·6·9)', dd_hours: 'Ore', dd_minutes: 'Completo (minuti)',
     dial_markers: 'Stile indici', dm_ticks: 'Tacche', dm_dots: 'Punti', dm_numbers: 'Numeri', dm_roman: 'Numeri romani', dm_none: 'Nessuno (minimal)',
     dm_disc: 'Numeri in cerchio',
-    dial_color: 'Colore quadrante',
+    dial_color: 'Colore quadrante', time_color: 'Colore orario',
     time_format: 'Formato ora', tf_24: '24 ore', tf_12: '12 ore (AM/PM)',
     show_seconds: 'Mostra i secondi', show_date: 'Mostra la data',
     tz_seconds: 'Mostra i secondi nei fusi',
@@ -884,7 +941,9 @@ class WorldClockCardEditor extends HTMLElement {
     } else {
       this._fillClockForm();
       this._fillDialForm();
+      this._fillDigitalForm();
       this._fillDatetimeForm();
+      this._fillFineForm();
       this._fillTimezonesForm();
       this._fillAppearanceForm();
     }
@@ -951,6 +1010,8 @@ class WorldClockCardEditor extends HTMLElement {
       title: c.title || '',
       size: c.size || 'medium',
       bold: c.bold !== false,
+      dial_color: c.dial_color,
+      time_color: c.time_color,
       language: c.language || 'system',
     };
     form.schema = [
@@ -962,6 +1023,8 @@ class WorldClockCardEditor extends HTMLElement {
         { value: 'xlarge', label: this.t('sz_xlarge') },
       ]) },
       { name: 'bold', selector: { boolean: {} } },
+      { name: 'dial_color', selector: { ui_color: {} } },
+      { name: 'time_color', selector: { ui_color: {} } },
       { name: 'language', selector: sel([
         { value: 'system', label: this.t('lang_system') },
         { value: 'it', label: this.t('lang_it') },
@@ -969,7 +1032,8 @@ class WorldClockCardEditor extends HTMLElement {
       ]) },
     ];
     const labels = {
-      title: this.t('title'), size: this.t('size'), bold: this.t('bold'), language: this.t('language'),
+      title: this.t('title'), size: this.t('size'), bold: this.t('bold'),
+      dial_color: this.t('dial_color'), time_color: this.t('time_color'), language: this.t('language'),
     };
     form.computeLabel = (s) => labels[s.name] || s.name;
     form.addEventListener('value-changed', (e) => {
@@ -977,7 +1041,33 @@ class WorldClockCardEditor extends HTMLElement {
       this._set('title', v.title);
       this._set('size', (v.size && v.size !== 'medium') ? v.size : undefined);
       this._set('bold', v.bold === false ? false : undefined);
+      this._set('dial_color', v.dial_color || undefined);
+      this._set('time_color', v.time_color || undefined);
       this._set('language', (v.language && v.language !== 'system') ? v.language : undefined);
+    });
+    mount.appendChild(form);
+    mount.dataset.filled = '1';
+  }
+
+  _fillDigitalForm() {
+    if (!this.shadowRoot) return;
+    const mount = this.shadowRoot.getElementById('digital-form');
+    if (!mount || mount.dataset.filled) return;
+    const c = this._config;
+    const sel = (opts) => ({ select: { mode: 'dropdown', options: opts } });
+    const form = document.createElement('ha-form');
+    form.hass = this._hass;
+    form.data = { digital_style: c.digital_style || 'plain' };
+    form.schema = [
+      { name: 'digital_style', selector: sel([
+        { value: 'plain', label: this.t('ds_plain') },
+        { value: 'card', label: this.t('ds_card') },
+      ]) },
+    ];
+    form.computeLabel = () => this.t('digital_style');
+    form.addEventListener('value-changed', (e) => {
+      const v = e.detail.value || {};
+      this._set('digital_style', (v.digital_style && v.digital_style !== 'plain') ? v.digital_style : undefined);
     });
     mount.appendChild(form);
     mount.dataset.filled = '1';
@@ -995,7 +1085,6 @@ class WorldClockCardEditor extends HTMLElement {
     form.data = {
       dial_detail: c.dial_detail || 'minutes',
       dial_markers: c.dial_markers || 'ticks',
-      dial_color: c.dial_color,
     };
     form.schema = [
       { name: 'dial_detail', selector: sel([
@@ -1011,17 +1100,15 @@ class WorldClockCardEditor extends HTMLElement {
         { value: 'roman', label: this.t('dm_roman') },
         { value: 'none', label: this.t('dm_none') },
       ]) },
-      { name: 'dial_color', selector: { ui_color: {} } },
     ];
     const labels = {
-      dial_detail: this.t('dial_detail'), dial_markers: this.t('dial_markers'), dial_color: this.t('dial_color'),
+      dial_detail: this.t('dial_detail'), dial_markers: this.t('dial_markers'),
     };
     form.computeLabel = (s) => labels[s.name] || s.name;
     form.addEventListener('value-changed', (e) => {
       const v = e.detail.value || {};
       this._set('dial_detail', (v.dial_detail && v.dial_detail !== 'minutes') ? v.dial_detail : undefined);
       this._set('dial_markers', (v.dial_markers && v.dial_markers !== 'ticks') ? v.dial_markers : undefined);
-      this._set('dial_color', v.dial_color || undefined);
     });
     mount.appendChild(form);
     mount.dataset.filled = '1';
@@ -1115,22 +1202,26 @@ class WorldClockCardEditor extends HTMLElement {
       const z = arr[i] || {};
       const f = document.createElement('ha-form');
       f.hass = this._hass;
-      f.data = { label: z.label || '', tz: z.tz || '', color: z.color };
+      f.data = { label: z.label || '', tz: z.tz || '', color: z.color, time_color: z.time_color };
       f.schema = [
         { type: 'grid', name: '', schema: [
           { name: 'tz', selector: { text: {} } },
           { name: 'label', selector: { text: {} } },
         ] },
-        { name: 'color', selector: { ui_color: {} } },
+        { type: 'grid', name: '', schema: [
+          { name: 'color', selector: { ui_color: {} } },
+          { name: 'time_color', selector: { ui_color: {} } },
+        ] },
       ];
       f.computeLabel = (s) => {
         if (s.name === 'tz') return this.t('tz_zone');
         if (s.name === 'label') return this.t('tz_place');
+        if (s.name === 'time_color') return this.t('time_color');
         return this.t('dial_color');
       };
       f.addEventListener('value-changed', (e) => {
         const v = e.detail.value || {};
-        this._setTz(i, v.label, v.tz, v.color);
+        this._setTz(i, v.label, v.tz, v.color, v.time_color);
       });
       const slotWrap = document.createElement('div');
       slotWrap.className = 'tz-slot';
@@ -1190,7 +1281,7 @@ class WorldClockCardEditor extends HTMLElement {
     this._updateTzVisibility();
   }
 
-  _setTz(index, label, tz, color) {
+  _setTz(index, label, tz, color, timeColor) {
     const arr = Array.isArray(this._config.timezones) ? this._config.timezones.slice() : [];
     while (arr.length < 3) arr.push({});
     // il fuso IANA non ha mai spazi: rimuovili (spazi normali e no-break) per
@@ -1198,6 +1289,8 @@ class WorldClockCardEditor extends HTMLElement {
     const entry = { label: (label || '').trim(), tz: (tz || '').replace(/\s+/g, '') };
     if (Array.isArray(color) && color.length === 3) entry.color = color;
     else if (typeof color === 'string' && color.trim()) entry.color = color.trim();
+    if (Array.isArray(timeColor) && timeColor.length === 3) entry.time_color = timeColor;
+    else if (typeof timeColor === 'string' && timeColor.trim()) entry.time_color = timeColor.trim();
     arr[index] = entry;
     // compatta: tieni solo gli slot con un fuso valorizzato
     const clean = arr.filter((z) => z && z.tz);
@@ -1254,6 +1347,43 @@ class WorldClockCardEditor extends HTMLElement {
   _updateOverlayVisibility() {
     const row = this.shadowRoot && this.shadowRoot.getElementById('overlay-row');
     if (row) row.style.display = this._config.background_image ? '' : 'none';
+  }
+
+  _fillFineForm() {
+    if (!this.shadowRoot) return;
+    const mount = this.shadowRoot.getElementById('fine-form');
+    if (!mount || mount.dataset.filled) return;
+    const c = this._config;
+
+    const slider = { number: { min: -0.3, max: 0.3, step: 0.01, mode: 'slider' } };
+    const form = document.createElement('ha-form');
+    form.hass = this._hass;
+    form.data = {
+      h_offset: Number(c.h_offset) || 0,
+      m_offset: Number(c.m_offset) || 0,
+      colon_offset: Number(c.colon_offset) || 0,
+      tail_offset: Number(c.tail_offset) || 0,
+    };
+    form.schema = [
+      { name: 'h_offset', selector: slider },
+      { name: 'm_offset', selector: slider },
+      { name: 'colon_offset', selector: slider },
+      { name: 'tail_offset', selector: slider },
+    ];
+    const labels = {
+      h_offset: this.t('pos_hours'), m_offset: this.t('pos_minutes'),
+      colon_offset: this.t('pos_colon'), tail_offset: this.t('pos_tail'),
+    };
+    form.computeLabel = (s) => labels[s.name] || s.name;
+    form.addEventListener('value-changed', (e) => {
+      const v = e.detail.value || {};
+      this._set('h_offset', v.h_offset ? v.h_offset : undefined);
+      this._set('m_offset', v.m_offset ? v.m_offset : undefined);
+      this._set('colon_offset', v.colon_offset ? v.colon_offset : undefined);
+      this._set('tail_offset', v.tail_offset ? v.tail_offset : undefined);
+    });
+    mount.appendChild(form);
+    mount.dataset.filled = '1';
   }
 
   _render() {
@@ -1343,8 +1473,16 @@ class WorldClockCardEditor extends HTMLElement {
           <div class="grp-body"><div id="dial-form"></div></div>
         </details>
         <details class="group">
+          <summary>${this.t('grp_dial_digital')}</summary>
+          <div class="grp-body"><div id="digital-form"></div></div>
+        </details>
+        <details class="group">
           <summary>${this.t('grp_datetime')}</summary>
           <div class="grp-body"><div id="datetime-form"></div></div>
+        </details>
+        <details class="group">
+          <summary>${this.t('grp_fine')}</summary>
+          <div class="grp-body"><div id="fine-form"></div></div>
         </details>
         <details class="group">
           <summary>${this.t('grp_timezones')}</summary>
@@ -1372,7 +1510,9 @@ class WorldClockCardEditor extends HTMLElement {
 
     this._fillClockForm();
     this._fillDialForm();
+    this._fillDigitalForm();
     this._fillDatetimeForm();
+    this._fillFineForm();
     this._fillTimezonesForm();
     this._fillAppearanceForm();
   }
@@ -1389,7 +1529,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c WORLD-CLOCK-CARD %c 1.0.0 ',
+  '%c WORLD-CLOCK-CARD %c 1.1.0 ',
   'color: white; background: #3b7dd8; font-weight: 700;',
   'color: #3b7dd8; background: #1c1c1c; font-weight: 700;'
 );

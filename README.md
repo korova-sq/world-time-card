@@ -30,14 +30,16 @@ their own labels, dial styles and colors. Backgrounds, gradients, transparency a
 ## ✨ Features
 
 - 🕐 **Digital & analog** clock faces
+- 🔲 **Digital styles** — plain digits, or **boxes** (hours & minutes in coloured boxes, colon included)
 - 🔀 **Two layouts** — clocks in a row with the local time centered, or a split layout with the zones stacked to the side
 - 🎯 **Dial styles** — ticks, dots, numbers, roman numerals or numbers-in-circles, with quarter / hour / full detail
-- 🌍 **Up to 2 world clocks**, each with its own label, dial style and color
+- 🌍 **Up to 2 world clocks**, each with its own label, dial style and colors
 - 📅 **Localized date** in six formats, with automatic language detection
 - 📐 **Four sizes** (small → extra large) that scale everything proportionally
-- 🎨 **Colors** for the dial, digital digits and date; **auto-contrast** on dark dials
+- 🎨 **Separate colors for dial and digits/markers** — for the local clock and for each zone; auto-contrast keeps things readable on dark dials
 - 🖼️ **Backgrounds** — transparent, image + overlay, or any CSS color / gradient, with an optional light-text mode
-- 🛠️ **card-mod friendly** — CSS variables for every element
+- 🛠️ **card-mod friendly** — CSS classes and variables for every element (put the digits in coloured boxes, etc.)
+- 🎚️ **Fine position** sliders to nudge hours, minutes, colon and seconds/AM-PM
 - ⚙️ Fully configurable from the **visual editor**
 
 ---
@@ -85,10 +87,13 @@ type: custom:world-clock-card
 | `language` | string | `system` | `system`, `it`, `en` (affects date & names) |
 | `layout` | string | `row` | `row` (local centered) or `split` (local left, zones right) |
 | `time_format` | string | `24` | `24` or `12` (AM/PM) |
+| `dial_color` | color | — | **Dial color**: analog dial fill; digital `card` style: box color |
+| `time_color` | color | — | **Time color**: digital digits, seconds, AM-PM; analog ticks/dots/numbers |
+| **Digital style** | | | |
+| `digital_style` | string | `plain` | `plain` (plain digits) or `card` (hours & minutes in coloured boxes) — local clock only |
 | **Analog dial** | | | |
 | `dial_detail` | string | `minutes` | `quarters`, `hours` or `minutes` |
 | `dial_markers` | string | `ticks` | `ticks`, `dots`, `disc`, `numbers`, `roman`, `none` |
-| `dial_color` | color | — | Dial fill color (theme color or hex). Digital: colors the time digits |
 | **Date** | | | |
 | `show_date` | boolean | `true` | Show the date |
 | `date_format` | string | `full` | `full`, `no_year`, `short`, `short_year`, `numeric`, `day_month` |
@@ -98,6 +103,11 @@ type: custom:world-clock-card
 | **Seconds** | | | |
 | `show_seconds` | boolean | `false` | Show seconds on the local clock |
 | `show_seconds_tz` | boolean | `false` | Show seconds on the world clocks |
+| **Element position** *(fine-tuning, in em; 0 = default)* | | | |
+| `h_offset` | number | `0` | Nudge hours up/down |
+| `m_offset` | number | `0` | Nudge minutes up/down |
+| `colon_offset` | number | `0` | Nudge the `:` up/down |
+| `tail_offset` | number | `0` | Nudge seconds/AM-PM up/down |
 | **World clocks** | | | |
 | `show_timezones` | boolean | `false` | Show the extra time zones |
 | `timezones` | list | `[]` | Up to 2 zones (see below) |
@@ -118,7 +128,8 @@ Each entry in `timezones` accepts:
 |---|---|---|
 | `tz` | string | IANA name, e.g. `Europe/London`, `America/New_York`, `Asia/Tokyo` |
 | `label` | string | Optional display name (falls back to the city) |
-| `color` | color | Optional dial / digits color for that zone |
+| `color` | color | Optional dial color for that zone |
+| `time_color` | color | Optional digits/markers color for that zone |
 
 > **Note:** the card shows the local clock **plus up to 2 time zones**. In both layouts
 > that means 3 clocks on screen at most.
@@ -146,17 +157,29 @@ clock_style: analog
 type: custom:world-clock-card
 clock_style: digital
 title: World Clock
-dial_color: indigo
+time_color: indigo
 date_format: short_year
 date_color: indigo
 show_timezones: true
 timezones:
   - tz: Europe/London
     label: London
-    color: cyan
+    time_color: cyan
   - tz: America/New_York
     label: New York
-    color: pink
+    time_color: pink
+```
+
+**Local · digital · boxed digits**
+```yaml
+type: custom:world-clock-card
+clock_style: digital
+title: World Clock
+digital_style: card
+dial_color: indigo
+time_color: white
+show_seconds: true
+time_format: "12"
 ```
 
 **Row · analog · roman + ticks**
@@ -244,11 +267,35 @@ All variables fall back to the current theme values, so nothing changes until yo
 | `--wc-label-color` | Zone names |
 | `--wc-face-color` | Analog dial fill |
 | `--wc-face-border-color` | Analog dial border |
-| `--wc-tick-color` | Ticks / dots |
-| `--wc-num-color` | Numbers (arabic / roman / circled) |
+| `--wc-tick-color` | Ticks / dots (overridden by `time_color` when set) |
+| `--wc-num-color` | Numbers (arabic / roman / circled, overridden by `time_color`) |
 | `--wc-hand-color` | Hour & minute hands |
 | `--wc-second-color` | Second hand |
 | `--wc-pin-color` | Center pin |
+| `--wc-box-color` | Digit box background (`digital_style: card`, same as `dial_color`) |
+| `--wc-digit-color` | Digits inside the box (`digital_style: card`, same as `time_color`) |
+
+### Element classes (digital)
+
+The digital time is split into separate elements, so you can style each part —
+handy together with `digital_style: card` (see below) or on your own with card-mod:
+
+| Class | Element |
+|---|---|
+| `.wc-time` | The whole digital time |
+| `.wc-h` | Hours (e.g. `07`) |
+| `.wc-m` | Minutes (e.g. `22`) |
+| `.wc-colon` | The `:` separator |
+| `.wc-sec` | Seconds (small) |
+| `.wc-ampm` | AM/PM (small) |
+| `.wc-date` | The date line |
+
+> **Boxed digits, no CSS needed:** set **Digital style → Boxes** in the editor (local
+> clock only) to put hours and minutes in coloured boxes, colored with **Dial color**
+> (the colon follows it too, for visibility); digits, seconds and AM/PM follow
+> **Time color**. If the digits don't look centered inside the box, use the
+> **Element position** sliders (hours, minutes, colon, seconds/AM-PM) to nudge them —
+> the perfect value can differ slightly per font/device.
 
 **Gradient fill with light text**
 ```yaml
@@ -275,6 +322,28 @@ card_mod:
     ha-card {
       border: 3px solid var(--primary-color);
       border-radius: 22px;
+    }
+```
+
+**Rounded pill boxes** *(custom shape on top of `digital_style: card`)*
+```yaml
+type: custom:world-clock-card
+digital_style: card
+card_mod:
+  style: |
+    .wc-h, .wc-m { border-radius: 999px; }
+```
+
+**Rounded pill boxes**
+```yaml
+type: custom:world-clock-card
+card_mod:
+  style: |
+    .wc-h, .wc-m {
+      background: #4caf50;
+      color: white !important;
+      padding: 0.08em 0.3em;
+      border-radius: 999px;
     }
 ```
 
