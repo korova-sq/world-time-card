@@ -1,4 +1,4 @@
-# World Clock Card
+# World Time Card
 
 A clean and customizable world clock card for Home Assistant.
 
@@ -20,5 +20,5 @@ time zones**, and style every part of it — all from the UI editor.
 - 🎚️ Fine position sliders for hours, minutes, colon and seconds/AM-PM
 - ⚙️ Fully configurable from the visual editor
 
-See the [README](https://github.com/korova-sq/world-clock-card) for the full
+See the [README](https://github.com/korova-sq/world-time-card) for the full
 list of options, examples and card-mod recipes.

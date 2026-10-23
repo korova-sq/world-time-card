@@ -1,15 +1,15 @@
-# World Clock Card
+# World Time Card
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/korova-sq/world-clock-card?style=flat)](https://github.com/korova-sq/world-clock-card/releases)
-[![GitHub Stars](https://img.shields.io/github/stars/korova-sq/world-clock-card?style=flat)](https://github.com/korova-sq/world-clock-card/stargazers)
-[![Downloads](https://img.shields.io/github/downloads/korova-sq/world-clock-card/total?style=flat&label=downloads)](https://github.com/korova-sq/world-clock-card/releases)
-[![Downloads@latest](https://img.shields.io/github/downloads/korova-sq/world-clock-card/latest/total?style=flat&label=downloads%40latest)](https://github.com/korova-sq/world-clock-card/releases/latest)
-[![GitHub Issues](https://img.shields.io/github/issues/korova-sq/world-clock-card?style=flat)](https://github.com/korova-sq/world-clock-card/issues)
+[![GitHub Release](https://img.shields.io/github/v/release/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/korova-sq/world-time-card/total?style=flat&label=downloads)](https://github.com/korova-sq/world-time-card/releases)
+[![Downloads@latest](https://img.shields.io/github/downloads/korova-sq/world-time-card/latest/total?style=flat&label=downloads%40latest)](https://github.com/korova-sq/world-time-card/releases/latest)
+[![GitHub Issues](https://img.shields.io/github/issues/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-korova.sq-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/korova.sq)
 
-![World Clock Card](images/banner.png)
+![World Time Card](images/banner.png)
 
 A clean and customizable world clock card for [Home Assistant](https://www.home-assistant.io/).
 Show the local time as a **digital** or **analog** clock, add up to **two extra time
@@ -17,7 +17,7 @@ zones**, and style every part of it — all from the UI editor.
 
 ---
 
-## 🤔 What is World Clock Card?
+## 🤔 What is World Time Card?
 
 A decorative yet practical clock for your dashboard. Pick a digital or analog face,
 choose how the dial looks (ticks, dots, numbers, roman numerals or numbers-in-circles),
@@ -48,22 +48,22 @@ their own labels, dial styles and colors. Backgrounds, gradients, transparency a
 
 ### HACS (recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=world-clock-card&category=plugin)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=world-time-card&category=plugin)
 
 1. Go to **HACS → Frontend**.
 2. Open the menu (⋮) → **Custom repositories**.
-3. Add `https://github.com/korova-sq/world-clock-card` with category **Lovelace**.
-4. Install **World Clock Card** and reload your browser.
+3. Add `https://github.com/korova-sq/world-time-card` with category **Lovelace**.
+4. Install **World Time Card** and reload your browser.
 
 *(Or just click the **Open in HACS** button above.)*
 
 ### Manual
 
-1. Download `world-clock-card.js` from the [latest release](https://github.com/korova-sq/world-clock-card/releases).
+1. Download `world-time-card.js` from the [latest release](https://github.com/korova-sq/world-time-card/releases).
 2. Copy it to `config/www/`.
 3. Add the resource in **Settings → Dashboards → Resources**:
    ```yaml
-   url: /local/world-clock-card.js
+   url: /local/world-time-card.js
    type: module
    ```
 
@@ -74,12 +74,12 @@ their own labels, dial styles and colors. Backgrounds, gradients, transparency a
 All options can be set from the visual editor. Minimal example:
 
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `type` | string | — | `custom:world-clock-card` (required) |
+| `type` | string | — | `custom:world-time-card` (required) |
 | `title` | string | — | Optional title shown above the clock |
 | `clock_style` | string | `digital` | `digital` or `analog` |
 | `size` | string | `medium` | `small`, `medium`, `large`, `xlarge` |
@@ -140,7 +140,7 @@ Each entry in `timezones` accepts:
 
 **Basic digital**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: digital
 title: Clock
 show_seconds: true
@@ -148,13 +148,13 @@ show_seconds: true
 
 **Basic analog**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: analog
 ```
 
 **Row · digital · colors**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: digital
 title: World Clock
 time_color: indigo
@@ -172,7 +172,7 @@ timezones:
 
 **Local · digital · boxed digits**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: digital
 title: World Clock
 digital_style: card
@@ -184,7 +184,7 @@ time_format: "12"
 
 **Row · analog · roman + ticks**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: analog
 title: World Clock
 dial_detail: hours
@@ -206,7 +206,7 @@ timezones:
 
 **Split · digital · gradient**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: digital
 title: World Clock
 layout: split
@@ -227,7 +227,7 @@ timezones:
 
 **Split · analog · gradient**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 clock_style: analog
 title: World Clock
 layout: split
@@ -299,7 +299,7 @@ handy together with `digital_style: card` (see below) or on your own with card-m
 
 **Gradient fill with light text**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 card_mod:
   style: |
     ha-card {
@@ -316,7 +316,7 @@ card_mod:
 
 **Colored border**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 card_mod:
   style: |
     ha-card {
@@ -327,7 +327,7 @@ card_mod:
 
 **Rounded pill boxes** *(custom shape on top of `digital_style: card`)*
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 digital_style: card
 card_mod:
   style: |
@@ -336,7 +336,7 @@ card_mod:
 
 **Rounded pill boxes**
 ```yaml
-type: custom:world-clock-card
+type: custom:world-time-card
 card_mod:
   style: |
     .wc-h, .wc-m {
