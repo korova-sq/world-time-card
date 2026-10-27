@@ -1,346 +1,353 @@
-# 🗓 Calendar & Tasks Card
+# World Time Card
 
-<br>
-
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/korova-sq/calendar-tasks-card)](https://github.com/korova-sq/calendar-tasks-card/releases)
-[![GitHub Stars](https://img.shields.io/github/stars/korova-sq/calendar-tasks-card?style=flat)](https://github.com/korova-sq/calendar-tasks-card/stargazers)
-[![Downloads](https://img.shields.io/github/downloads/korova-sq/calendar-tasks-card/total?style=flat)](https://github.com/korova-sq/calendar-tasks-card/releases)
-[![Downloads@latest](https://img.shields.io/github/downloads/korova-sq/calendar-tasks-card/latest/total?style=flat)](https://github.com/korova-sq/calendar-tasks-card/releases/latest)
-[![GitHub Issues](https://img.shields.io/github/issues/korova-sq/calendar-tasks-card?style=flat)](https://github.com/korova-sq/calendar-tasks-card/issues)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/korova-sq/world-time-card/total?style=flat&label=downloads)](https://github.com/korova-sq/world-time-card/releases)
+[![Downloads@latest](https://img.shields.io/github/downloads/korova-sq/world-time-card/latest/total?style=flat&label=downloads%40latest)](https://github.com/korova-sq/world-time-card/releases/latest)
+[![GitHub Issues](https://img.shields.io/github/issues/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/issues)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-korova.sq-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/korova.sq)
 
-<br>
+![World Time Card](images/banner.png)
 
-![Calendar & Tasks Card](https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/banner.png)
+A clean and customizable world clock card for [Home Assistant](https://www.home-assistant.io/).
+Show the local time as a **digital** or **analog** clock, add up to **two extra time
+zones**, and style every part of it — all from the UI editor.
 
-<br>
+---
 
-## 🤔 What is Calendar & Tasks Card?
+## 🤔 What is World Time Card?
 
-Calendar & Tasks Card is a unified agenda view for [Home Assistant](https://www.home-assistant.io/) that combines **calendar events** and **todo tasks** in a single, clean timeline.
+A decorative yet practical clock for your dashboard. Pick a digital or analog face,
+choose how the dial looks (ticks, dots, numbers, roman numerals or numbers-in-circles),
+add a localized date in the format you like, and drop in a couple of world clocks with
+their own labels, dial styles and colors. Backgrounds, gradients, transparency and
+`card-mod` variables let you match it to any dashboard.
 
-Most agenda cards on HACS show either calendar events OR todo tasks. This card unifies them with smart grouping — designed for dashboards where you want to see "what's coming up" at a glance, mixing appointments and reminders without switching cards.
+---
 
 ## ✨ Features
 
-- 🛠 **Visual editor** for all options (no YAML editing required)
-- 📅 **Unified view**: events and tasks in one timeline, sorted by date
-- 🗓️ **Monthly grid view**: switch to a classic month calendar with event dots, tap-a-day popup, and month navigation
-- 🔀 **View switch button**: a header button to flip between agenda and month view without opening the editor (session-only, reverts to the default on reload)
-- 🎨 **Color picker**: native Home Assistant colour picker per entity (theme colours), auto-assigned from the theme palette when unset
-- ✅ **Task completion**: tick tasks directly from the card
-- 🚨 **Overdue section**: tasks past their deadline highlighted in red
-- 📋 **No Date section**: active tasks without a due date (can be hidden)
-- 🗂 **Completed section**: recently finished tasks for context
-- ⏱ **Relative time**: "Tomorrow", "In 3 days", "Yesterday", "1 week overdue"
-- 🗓 **Multi-day events**: events spanning several days appear on each one, with a day counter
-- 📍 **Event location**: shows the location of calendar events with optional click-to-maps
-- 📅 **Current date in header**: optionally show today's localised date under the title
-- 📆 **Week numbers**: ISO 8601 week separators (toggle on/off)
-- 🔽 **Collapsible**: hide everything with one click, state persists
-- 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
-- 📏 **Compact mode**: reduced spacing option for tighter layouts
-- ☀️ **Weather support**: optional today's weather widget and per-day forecast
-- 🖼 **Custom background**: transparent mode or background image with a light/dark overlay
-- 🎨 **card-mod support**: style the card with [card-mod](https://github.com/thomasloven/lovelace-card-mod)
-- ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
-- 🔍 **Filters**: hide events/tasks by keyword (`exclude`), show only matching ones (`include`), or hide duplicates across calendars
-- 🔄 **Force refresh**: button to update all integrations on demand
-- 🌐 **Internationalization**: English, Italian, German, French, Polish and Swedish — auto-detects from system (card display + visual editor)
-- 🕐 **Time format**: 12h or 24h, follows system preferences
-- 👆 **Customizable actions**: tap, hold, double-tap (Home Assistant standard)
-- 🪶 **Clean YAML**: only non-default settings are saved
-- 🚀 **Zero dependencies**: no other custom cards required
+- 🕐 **Digital & analog** clock faces
+- 🔲 **Digital styles** — plain digits, or **boxes** (hours & minutes in coloured boxes, colon included)
+- 🔀 **Two layouts** — clocks in a row with the local time centered, or a split layout with the zones stacked to the side
+- 🎯 **Dial styles** — ticks, dots, numbers, roman numerals or numbers-in-circles, with quarter / hour / full detail
+- 🌍 **Up to 2 world clocks**, each with its own label, dial style and colors
+- 📅 **Localized date** in six formats, with automatic language detection
+- 📐 **Four sizes** (small → extra large) that scale everything proportionally
+- 🎨 **Separate colors for dial and digits/markers** — for the local clock and for each zone; auto-contrast keeps things readable on dark dials
+- 🖼️ **Backgrounds** — transparent, image + overlay, or any CSS color / gradient, with an optional light-text mode
+- 🛠️ **card-mod friendly** — CSS classes and variables for every element (put the digits in coloured boxes, etc.)
+- 🎚️ **Fine position** sliders to nudge hours, minutes, colon and seconds/AM-PM
+- ⚙️ Fully configurable from the **visual editor**
 
-## 📸 Screenshots
-
-<table align="center">
-<tr>
-<td valign="top" align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/01-overview.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/02-editor-colors.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/03-editor-sections.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>📆 Week numbers</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/04-week-numbers.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/05-agenda-view.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>☀️ Weather support</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-weather-support.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📅 Month view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-month-view.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>📅 Month picker</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/07-month-picker.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📋 Day popup</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/08-day-popup.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"></td>
-</tr>
-</table>
-
-<br>
-
-Display weather information from any HA `weather.*` entity with two independent options:
-
-- **Today's weather widget** (top of card): shows current condition, temperature, min/max for the day, and humidity.
-- **Per-day weather** (next to each date): icon and temperature for the next 5-7 days. For days beyond the forecast range, a discrete cloud-off icon is shown as placeholder.
-
-Both options can be enabled independently — show only one, the other, or both. Enable them in the **Weather** section of the visual editor.
+---
 
 ## 📦 Installation
 
 ### HACS (recommended)
 
-Calendar & Tasks Card is available in the default HACS store:
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=world-time-card&category=plugin)
 
-1. Open HACS in Home Assistant
-2. Search for **Calendar & Tasks Card**
-3. Click **Download**
-4. Reload your browser (Ctrl+F5 or Cmd+Shift+R)
+1. Go to **HACS → Frontend**.
+2. Open the menu (⋮) → **Custom repositories**.
+3. Add `https://github.com/korova-sq/world-time-card` with category **Lovelace**.
+4. Install **World Time Card** and reload your browser.
 
-### Manual installation
+*(Or just click the **Open in HACS** button above.)*
 
-1. Download `calendar-tasks-card.js` from the [latest release](https://github.com/korova-sq/calendar-tasks-card/releases)
-2. Copy it to `/config/www/calendar-tasks-card.js`
-3. Go to **Settings → Dashboards → Resources** (top right ⋮ menu)
-4. Click **Add Resource**
-5. URL: `/local/calendar-tasks-card.js`, Type: **JavaScript Module**
-6. Reload your browser
+### Manual
 
-## ⚙️ Quick start
+1. Download `world-time-card.js` from the [latest release](https://github.com/korova-sq/world-time-card/releases).
+2. Copy it to `config/www/`.
+3. Add the resource in **Settings → Dashboards → Resources**:
+   ```yaml
+   url: /local/world-time-card.js
+   type: module
+   ```
 
-Once installed, add the card to your dashboard:
+---
 
-1. Edit your dashboard
-2. Click **Add Card**
-3. Search for **Calendar & Tasks Card**
-4. Add your entities and configure via the visual editor
+## ⚙️ Configuration
 
-Or via YAML:
+All options can be set from the visual editor. Minimal example:
 
 ```yaml
-type: custom:calendar-tasks-card
-calendars:
-  - calendar.family
-todos:
-  - todo.shopping
+type: custom:world-time-card
 ```
 
-That's it. The card will work with sensible defaults.
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `type` | string | — | `custom:world-time-card` (required) |
+| `title` | string | — | Optional title shown above the clock |
+| `clock_style` | string | `digital` | `digital` or `analog` |
+| `size` | string | `medium` | `small`, `medium`, `large`, `xlarge` |
+| `bold` | boolean | `true` | Bold text for time, date, title and zone names |
+| `language` | string | `system` | `system`, `it`, `en` (affects date & names) |
+| `layout` | string | `row` | `row` (local centered) or `split` (local left, zones right) |
+| `time_format` | string | `24` | `24` or `12` (AM/PM) |
+| `dial_color` | color | — | **Dial color**: analog dial fill; digital `card` style: box color |
+| `time_color` | color | — | **Time color**: digital digits, seconds, AM-PM; analog ticks/dots/numbers |
+| **Digital style** | | | |
+| `digital_style` | string | `plain` | `plain` (plain digits) or `card` (hours & minutes in coloured boxes) — local clock only |
+| **Analog dial** | | | |
+| `dial_detail` | string | `minutes` | `quarters`, `hours` or `minutes` |
+| `dial_markers` | string | `ticks` | `ticks`, `dots`, `disc`, `numbers`, `roman`, `none` |
+| **Date** | | | |
+| `show_date` | boolean | `true` | Show the date |
+| `date_format` | string | `full` | `full`, `no_year`, `short`, `short_year`, `numeric`, `day_month` |
+| `date_separator` | string | `/` | Separator for the `numeric` format: `/`, `-`, `.` |
+| `date_position` | string | `below` | `below` or `above` the clock |
+| `date_color` | color | — | Date text color |
+| **Seconds** | | | |
+| `show_seconds` | boolean | `false` | Show seconds on the local clock |
+| `show_seconds_tz` | boolean | `false` | Show seconds on the world clocks |
+| **Element position** *(fine-tuning, in em; 0 = default)* | | | |
+| `h_offset` | number | `0` | Nudge hours up/down |
+| `m_offset` | number | `0` | Nudge minutes up/down |
+| `colon_offset` | number | `0` | Nudge the `:` up/down |
+| `tail_offset` | number | `0` | Nudge seconds/AM-PM up/down |
+| **World clocks** | | | |
+| `show_timezones` | boolean | `false` | Show the extra time zones |
+| `timezones` | list | `[]` | Up to 2 zones (see below) |
+| `tz_dial_detail` | string | `inherit` | Dial detail for zones (or `inherit` from local) |
+| `tz_dial_markers` | string | `inherit` | Dial style for zones (or `inherit` from local) |
+| **Background** | | | |
+| `transparent` | boolean | `false` | Remove background, border and shadow |
+| `background_image` | string | — | URL or `/local/…` image |
+| `background_overlay` | number | `0` | Veil over the image: `-1` (lighter) … `0` … `+1` (darker) |
+| `background_css` | string | — | Any CSS `background` value (color or gradient) |
+| `light_text` | boolean | `false` | Force light text/markers (useful on dark backgrounds) |
 
-## 📚 Configuration
+### Time zones
 
-The card has a complete visual editor with six sections:
+Each entry in `timezones` accepts:
 
-### 📋 Entities
-- **Calendars**: any `calendar.*` entity from Home Assistant
-- **Todo lists**: any `todo.*` entity (Local To-do, Google Tasks, CalDAV, etc.)
-
-Each entity has a native Home Assistant colour picker where you can choose a theme colour. The colour applies to the vertical bar next to each event/task in the card. Leave it on **Default** to let the card assign a colour automatically from the theme palette (rotating through distinct colours for different entities).
-
-> **Upgrading from a version before 1.10.0?** The colour system moved to Home Assistant's native palette and colours set in older versions are not carried over — open the editor and re-pick the colour for each calendar/list you had customised.
-
-### 🎛 General
-| Option | Default | Description |
+| Key | Type | Description |
 |---|---|---|
-| `title` | `Agenda` | Card title |
-| `show_title` | `true` | Show the title bar |
-| `show_current_date` | `false` | Show today's date as a subtitle under the title, localised to the card language |
-| `days` | `7` | Days to look ahead |
-| `show_refresh` | `true` | Show 🔄 refresh button |
-| `show_add_event` | `false` | Show ➕ button in the header to add events/tasks (see below) |
-| `show_view_switch` | `false` | Show a header button to switch between agenda and month view (session-only; the editor's `month_view` toggle sets the persistent default) |
-| `show_collapse_button` | `true` | Show ▲ collapse button |
-| `limit_events_visible` | `false` | Enable scrollbar to limit visible events |
-| `max_events_visible` | `3` | Number of events visible when `limit_events_visible` is true |
-| `compact_mode` | `false` | Reduced vertical spacing for tighter layout |
-| `show_weather` | `false` | Master toggle to enable weather features |
-| `weather_entity` | `""` | HA weather entity to use (e.g. `weather.home`) |
-| `show_weather_today` | `true` | Show today's weather widget at the top of the card |
-| `show_weather_per_day` | `false` | Show weather icon+temp next to each day's date |
-| `exclude` | `[]` | List of keywords; events and tasks with titles containing any keyword will be hidden (partial match, case-insensitive) |
-| `include` | `[]` | Allowlist of keywords; when set, ONLY events and tasks whose title contains one of them are shown (partial match, case-insensitive). Applied before `exclude` |
-| `filter_duplicates` | `false` | Hide the same event/task appearing on multiple calendars/lists (events matched by title + start + end + location, tasks by title + due date; first occurrence kept) |
+| `tz` | string | IANA name, e.g. `Europe/London`, `America/New_York`, `Asia/Tokyo` |
+| `label` | string | Optional display name (falls back to the city) |
+| `color` | color | Optional dial color for that zone |
+| `time_color` | color | Optional digits/markers color for that zone |
 
-### 🌐 Localization
-| Option | Default | Values |
-|---|---|---|
-| `language` | `auto` | `auto`, `en`, `it`, `de`, `fr`, `pl`, `sv` |
-| `time_format` | `auto` | `auto`, `24h`, `12h` |
-| `first_day_of_week` | `auto` | `auto`, `monday`, `sunday`, `saturday` |
+> **Note:** the card shows the local clock **plus up to 2 time zones**. In both layouts
+> that means 3 clocks on screen at most.
 
-### 👁 Display
-| Option | Default | Description |
-|---|---|---|
-| `month_view` | `false` | Show a monthly calendar grid instead of the agenda list, with event dots, a tap-a-day popup and month navigation |
-| `show_week_number` | `false` | ISO 8601 week separators (agenda) / week-number column (grid) |
-| `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
-| `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
-| `show_empty_days` | `false` | Show days with no events |
-| `show_relative_time` | `true` | Relative time labels: "Tomorrow", "In 3 days", and — for imminent items with a precise time — "In 3 hours" / "In 45 min" |
-| `event_progress` | `off` | Progress indicator for an event currently in progress: `off`, `line` (a thin bar under the event) or `bar` (a full-width progress bar, filled in the calendar's colour). Mutually exclusive with the relative-time label on the same event |
-| `show_source` | `false` | Show entity name as subtitle |
-| `show_description` | `true` | Show event/task description |
-| `show_location` | `false` | Show event location with map pin icon (calendar events only) |
-| `location_clickable` | `false` | Make location clickable, opens Google Maps in new tab |
+---
 
-### 🖼 Background
-| Option | Default | Description |
-|---|---|---|
-| `transparent` | `false` | Remove card background, shadow and border so it blends into the dashboard |
-| `background_image` | `null` | Background image, as a URL or a `/local/…` path |
-| `background_overlay` | `0` | Veil over the image, from `-1` (full white) through `0` (none) to `+1` (full black), to keep the text readable |
+## 📋 Examples
 
-Background image and transparency are mutually exclusive: if an image is set, it takes precedence.
-
-Past a dark overlay threshold, the card text automatically switches to a light colour. Transparency also works with "glass" themes and card-mod.
-
-These options use the same names as in [sun-weather-card](https://github.com/korova-sq/sun-weather-card), so both cards are configured the same way.
-
-### ➕ Add event/task
-
-When `show_add_event` is enabled, a button appears in the header that opens an inline form to create a new calendar event or todo task — without leaving the card or reloading the page.
-
-- Choose **event** or **task** (only shown if you have both calendars and todo lists configured)
-- Pick the target calendar or todo list from a dropdown
-- **Events**: title, all-day toggle, start/end, optional location and description
-- **Tasks**: title, optional due date, optional description
-
-The button only appears if at least one calendar or todo list is configured. The form uses Home Assistant's official `calendar.create_event` and `todo.add_item` services, so creating events only works for calendars that support it (e.g. Local Calendar, CalDAV) — read-only calendars won't accept new events. Recurring events aren't supported, since the underlying service doesn't offer it; create those from the Calendar tab as usual.
-
-### 🔀 View switch button
-
-When `show_view_switch` is enabled, a button appears in the header to switch between the agenda list and the monthly grid. The `month_view` toggle in the editor sets the **default** view; the button changes the view for the current session only and reverts to the default when the page reloads. This keeps the editor as the single source of truth for the persistent default, so users who don't enable the button can still choose the view.
-
-### 🎨 card-mod
-
-The card supports [card-mod](https://github.com/thomasloven/lovelace-card-mod). Add a `card_mod:` block to the card config to apply custom CSS. Styles are re-applied after every render, so they survive refreshes and view changes.
-
+**Basic digital**
 ```yaml
-type: custom:calendar-tasks-card
-calendars:
-  - calendar.family
+type: custom:world-time-card
+clock_style: digital
+title: Clock
+show_seconds: true
+```
+
+**Basic analog**
+```yaml
+type: custom:world-time-card
+clock_style: analog
+```
+
+**Row · digital · colors**
+```yaml
+type: custom:world-time-card
+clock_style: digital
+title: World Clock
+time_color: indigo
+date_format: short_year
+date_color: indigo
+show_timezones: true
+timezones:
+  - tz: Europe/London
+    label: London
+    time_color: cyan
+  - tz: America/New_York
+    label: New York
+    time_color: pink
+```
+
+**Local · digital · boxed digits**
+```yaml
+type: custom:world-time-card
+clock_style: digital
+title: World Clock
+digital_style: card
+dial_color: indigo
+time_color: white
+show_seconds: true
+time_format: "12"
+```
+
+**Row · analog · roman + ticks**
+```yaml
+type: custom:world-time-card
+clock_style: analog
+title: World Clock
+dial_detail: hours
+dial_markers: roman
+dial_color: "#90a4ae"
+date_format: numeric
+date_separator: "."
+show_timezones: true
+tz_dial_markers: ticks
+tz_dial_detail: hours
+timezones:
+  - tz: Europe/London
+    label: London
+    color: "#b39ddb"
+  - tz: America/New_York
+    label: New York
+    color: "#80cbc4"
+```
+
+**Split · digital · gradient**
+```yaml
+type: custom:world-time-card
+clock_style: digital
+title: World Clock
+layout: split
+size: large
+date_format: day_month
+show_seconds: true
+background_css: "linear-gradient(135deg, #667eea, #764ba2)"
+light_text: true
+show_timezones: true
+timezones:
+  - tz: America/New_York
+    label: New York
+    color: amber
+  - tz: Asia/Tokyo
+    label: Tokyo
+    color: cyan
+```
+
+**Split · analog · gradient**
+```yaml
+type: custom:world-time-card
+clock_style: analog
+title: World Clock
+layout: split
+date_format: no_year
+dial_markers: disc
+dial_detail: hours
+dial_color: deep-purple
+background_css: "linear-gradient(120deg, #f6d365, #fda085)"
+show_timezones: true
+tz_dial_markers: ticks
+tz_dial_detail: hours
+timezones:
+  - tz: America/New_York
+    label: New York
+    color: cyan
+  - tz: Asia/Tokyo
+    label: Tokyo
+    color: pink
+```
+
+---
+
+## 🎨 Customization with card-mod
+
+The card exposes CSS variables so you can restyle every element with
+[card-mod](https://github.com/thomasloven/lovelace-card-mod) or a theme.
+All variables fall back to the current theme values, so nothing changes until you set them.
+
+> The *Transparent background* and *Background image* options force the card background
+> with `!important`. To set the background from card-mod instead, leave both of those off.
+
+| Variable | What it styles |
+|---|---|
+| `--wc-title-color` | Title |
+| `--wc-time-color` | Digital time digits |
+| `--wc-date-color` | Date |
+| `--wc-label-color` | Zone names |
+| `--wc-face-color` | Analog dial fill |
+| `--wc-face-border-color` | Analog dial border |
+| `--wc-tick-color` | Ticks / dots (overridden by `time_color` when set) |
+| `--wc-num-color` | Numbers (arabic / roman / circled, overridden by `time_color`) |
+| `--wc-hand-color` | Hour & minute hands |
+| `--wc-second-color` | Second hand |
+| `--wc-pin-color` | Center pin |
+| `--wc-box-color` | Digit box background (`digital_style: card`, same as `dial_color`) |
+| `--wc-digit-color` | Digits inside the box (`digital_style: card`, same as `time_color`) |
+
+### Element classes (digital)
+
+The digital time is split into separate elements, so you can style each part —
+handy together with `digital_style: card` (see below) or on your own with card-mod:
+
+| Class | Element |
+|---|---|
+| `.wc-time` | The whole digital time |
+| `.wc-h` | Hours (e.g. `07`) |
+| `.wc-m` | Minutes (e.g. `22`) |
+| `.wc-colon` | The `:` separator |
+| `.wc-sec` | Seconds (small) |
+| `.wc-ampm` | AM/PM (small) |
+| `.wc-date` | The date line |
+
+> **Boxed digits, no CSS needed:** set **Digital style → Boxes** in the editor (local
+> clock only) to put hours and minutes in coloured boxes, colored with **Dial color**
+> (the colon follows it too, for visibility); digits, seconds and AM/PM follow
+> **Time color**. If the digits don't look centered inside the box, use the
+> **Element position** sliders (hours, minutes, colon, seconds/AM-PM) to nudge them —
+> the perfect value can differ slightly per font/device.
+
+**Gradient fill with light text**
+```yaml
+type: custom:world-time-card
 card_mod:
   style: |
     ha-card {
-      border: 2px solid var(--primary-color);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      background: linear-gradient(135deg, #667eea, #764ba2) !important;
+      border-radius: 20px;
+    }
+    :host {
+      --wc-title-color: #ffffff;
+      --wc-time-color: #ffffff;
+      --wc-date-color: rgba(255,255,255,0.85);
+      --wc-hand-color: #ffffff;
     }
 ```
 
-card-mod must be installed separately (via HACS). If it isn't installed, the `card_mod` block is simply ignored.
-
-### ✅ Tasks
-| Option | Default | Description |
-|---|---|---|
-| `show_no_date` | `true` | Show the "No Date" section (active tasks without a due date); set to `false` to hide it |
-| `show_overdue` | `true` | Show Overdue section |
-| `overdue_days` | `0` | Limit overdue (0 = all) |
-| `overdue_position` | `bottom` | Position of the Overdue section: `bottom` (below the days) or `top` (above them) |
-| `show_completed` | `true` | Show Completed section |
-| `completed_days` | `7` | Limit completed to N days |
-| `completed_position` | `bottom` | Position of the Completed section: `bottom` or `top` |
-| `allow_complete` | `false` | Show checkbox to mark complete |
-
-### 👆 Interactions
-Three configurable actions following Home Assistant standards:
-- **Tap**: single click
-- **Hold**: long press
-- **Double tap**: two quick clicks
-
-Each can be: `none`, `more-info`, `toggle`, `navigate`, `url`, `call-service`, or `assist`.
-
-## 📝 Complete YAML example
-
+**Colored border**
 ```yaml
-type: custom:calendar-tasks-card
-title: Agenda
-days: 7
-calendars:
-  - calendar.family
-  - calendar.work
-todos:
-  - todo.shopping
-  - todo.work_tasks
-show_week_number: true
-show_relative_time: true
-show_overdue: true
-show_completed: true
-completed_days: 7
-allow_complete: true
-show_location: true
-location_clickable: true
-language: auto
-time_format: 24h
-first_day_of_week: monday
-entity_colors:
-  calendar.family: "#d93025"
-  calendar.work: "#4285f4"
-  todo.shopping: "#34a853"
-tap_action:
-  action: navigate
-  navigation_path: /lovelace/agenda
+type: custom:world-time-card
+card_mod:
+  style: |
+    ha-card {
+      border: 3px solid var(--primary-color);
+      border-radius: 22px;
+    }
 ```
 
-## 🗂 How tasks are classified
+**Rounded pill boxes** *(custom shape on top of `digital_style: card`)*
+```yaml
+type: custom:world-time-card
+digital_style: card
+card_mod:
+  style: |
+    .wc-h, .wc-m { border-radius: 999px; }
+```
 
-The card automatically sorts tasks into different sections:
+**Rounded pill boxes**
+```yaml
+type: custom:world-time-card
+card_mod:
+  style: |
+    .wc-h, .wc-m {
+      background: #4caf50;
+      color: white !important;
+      padding: 0.08em 0.3em;
+      border-radius: 999px;
+    }
+```
 
-| Task state | Where it appears |
-|---|---|
-| Active, today or future date | In the corresponding day in the agenda |
-| Active, no date | 📋 **No Date** section |
-| Active, **past date** | 🚨 **Overdue** section (red highlight) |
-| Completed (any date) | 🗂 **Completed** section (if enabled) |
-
-## ⚠️ Known limitations
-
-### 🍎 iCloud CalDAV: task completion is broken
-Marking a task complete from Home Assistant currently fails for iCloud CalDAV with `Calendar.search() got multiple values for argument 'sort_keys'`. This is a [known bug in Home Assistant core](https://github.com/home-assistant/core/issues), not in this card.
-
-**Workaround**: use Local To-do, Google Tasks, or [Radicale](https://radicale.org/) for tasks you want to complete from HA. iCloud CalDAV still works fine for read-only viewing.
-
-### 📅 Google Tasks: no time-of-day on tasks
-The Google Tasks API only stores the date, not the time. Tasks from Google Tasks will show `—` instead of a time, even if you set one in the Google Tasks app. This is a Google limitation.
-
-### ☑ Calendar events can't be "completed"
-Calendar events are appointments, not actions — they don't have a completion state. Only tasks (`todo.*` entities) show the completion checkbox.
-
-### 🐌 iCloud propagation delay
-Reminders created in the Apple Reminders app on iPhone can take up to 1 hour to appear on Apple's public CalDAV server. Not a card issue. For lower latency, consider a self-hosted CalDAV server like [Radicale](https://radicale.org/) or [Baikal](https://sabre.io/baikal/).
-
-## ⚠️ Disclaimer
-
-This card is provided as-is for convenience. **Do not rely on it as the sole notification system for time-critical events** (medical appointments, flights, important deadlines, etc.). Always set independent notifications in your calendar app or phone for events that matter.
-
-The card depends on third-party integrations (CalDAV, Google Tasks, etc.) which may have their own bugs, latencies, or limitations outside of this card's control. See [Known limitations](#%EF%B8%8F-known-limitations) above.
-
-See the [LICENSE](LICENSE) for full terms — this software is provided without warranty of any kind.
-
-## 🔧 Troubleshooting
-
-**The card doesn't show up after installation**
-- Did you reload the browser with Ctrl+F5 (hard refresh)?
-- Check Settings → Dashboards → Resources: is the URL correct and the type "JavaScript Module"?
-- Open the browser console (F12) and look for errors
-
-**The refresh button gives an error**
-- Make sure all calendar and todo entities exist and aren't disabled
-- If you've edited the YAML manually, check there are no empty entries (`- ""`)
-
-**Task completion doesn't work**
-- Check the limitations section above
-- Test the operation manually: Developer Tools → Actions → `todo.update_item`
-
-**Colors don't apply**
-- Make sure you clicked "Save" in the editor after picking a color
-- Colors are stored in `entity_colors` in the YAML
-
-## 💬 Discussion
-
-Discussion and support thread on the Home Assistant community forum:
-[Calendar & Tasks Card on the HA community](https://community.home-assistant.io/t/calendar-tasks-card-unified-agenda-for-events-and-todos/1010940)
+---
 
 ## ☕ Support
 
@@ -348,20 +355,15 @@ If you enjoy this card and want to say thanks, a coffee is always welcome!
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-korova.sq-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/korova.sq)
 
+---
+
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please:
-- Test changes against multiple integrations (Local To-do, CalDAV, Google Tasks if possible)
-- Keep the code style consistent with the rest of the file
-- Update the README if you add new options
+Issues, ideas and pull requests are welcome. Translations are especially appreciated —
+the editor currently ships with English and Italian.
 
-## 🃏 My other cards
-
-| Card | Description |
-|---|---|
-| [🌤 Sun Weather Card](https://github.com/korova-sq/sun-weather-card) | Sun position, weather forecast and outdoor conditions in one card |
-| [🕐 World Time Card](https://github.com/korova-sq/world-time-card) | Multiple world clocks with timezone support |
+---
 
 ## 📄 License
 
-[MIT](LICENSE) © 2026 korova-sq
+Released under the [MIT License](LICENSE).
