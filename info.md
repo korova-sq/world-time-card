@@ -8,14 +8,17 @@ time zones**, and style every part of it — all from the UI editor.
 ## Features
 
 - 🕐 Digital & analog clock faces
-- 🔲 Digital styles — plain digits, or boxes (hours & minutes in coloured boxes)
+- 🔲 Digital styles — plain digits, boxes (hours & minutes in coloured boxes) or LED (7-segment digits, weekdays, optional seconds)
+- 🌤️ Optional weather block (icon + temperature) next to the digital clock
 - 🔀 Two layouts — local time centered, or split with zones on the side
 - 🎯 Dial styles — ticks, dots, numbers, roman numerals or numbers-in-circles
 - 🌍 Up to 2 world clocks, each with its own label, dial style and colors
 - 📅 Localized date in six formats
 - 📐 Four sizes that scale everything proportionally
 - 🎨 Separate colors for dial and digits/markers (local + each zone), with auto-contrast on dark dials
-- 🖼️ Transparent, image + overlay, or CSS gradient backgrounds
+- 🖼️ Transparent, image + overlay, or CSS gradient backgrounds, with an optional transparent margin (`background_inset`) for neumorphic themes
+- 👆 Native tap, hold and double-tap actions
+- 📏 Auto-fit: scales down when it would overflow the card
 - 🛠️ card-mod friendly (CSS classes & variables — put the digits in coloured boxes, etc.)
 - 🎚️ Fine position sliders for hours, minutes, colon and seconds/AM-PM
 - ⚙️ Fully configurable from the visual editor

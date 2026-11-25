@@ -1,6 +1,6 @@
 # World Time Card
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat)](https://github.com/hacs/integration)
+[![Marketplace](https://img.shields.io/badge/Marketplace-Default-41BDF5.svg)](https://www.home-assistant.io/integrations/marketplace)
 [![GitHub Release](https://img.shields.io/github/v/release/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/korova-sq/world-time-card?style=flat)](https://github.com/korova-sq/world-time-card/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/korova-sq/world-time-card/total?style=flat&label=downloads)](https://github.com/korova-sq/world-time-card/releases)
@@ -30,14 +30,17 @@ their own labels, dial styles and colors. Backgrounds, gradients, transparency a
 ## ✨ Features
 
 - 🕐 **Digital & analog** clock faces
-- 🔲 **Digital styles** — plain digits, or **boxes** (hours & minutes in coloured boxes, colon included)
+- 🔲 **Digital styles** — plain digits, **boxes** (hours & minutes in coloured boxes, colon included) or a **LED** look with 7-segment digits, weekday column and optional seconds
+- 🌤️ **Optional weather block** — condition icon and temperature next to the digital clock, from any `weather` entity
 - 🔀 **Two layouts** — clocks in a row with the local time centered, or a split layout with the zones stacked to the side
 - 🎯 **Dial styles** — ticks, dots, numbers, roman numerals or numbers-in-circles, with quarter / hour / full detail
 - 🌍 **Up to 2 world clocks**, each with its own label, dial style and colors
 - 📅 **Localized date** in six formats, with automatic language detection
 - 📐 **Four sizes** (small → extra large) that scale everything proportionally
 - 🎨 **Separate colors for dial and digits/markers** — for the local clock and for each zone; auto-contrast keeps things readable on dark dials
-- 🖼️ **Backgrounds** — transparent, image + overlay, or any CSS color / gradient, with an optional light-text mode
+- 🖼️ **Backgrounds** — transparent, image + overlay, or any CSS color / gradient, with an optional light-text mode and an optional transparent margin (`background_inset`) for neumorphic themes
+- 👆 **Native interactions** — tap, hold and double-tap actions (more-info, navigate, URL, perform action, toggle)
+- 📏 **Auto-fit** — the clock scales down by itself when it would be wider than the card
 - 🛠️ **card-mod friendly** — CSS classes and variables for every element (put the digits in coloured boxes, etc.)
 - 🎚️ **Fine position** sliders to nudge hours, minutes, colon and seconds/AM-PM
 - ⚙️ Fully configurable from the **visual editor**
@@ -46,16 +49,23 @@ their own labels, dial styles and colors. Backgrounds, gradients, transparency a
 
 ## 📦 Installation
 
-### HACS (recommended)
+### Marketplace / HACS (recommended)
+
+World Time Card is available in the default store.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=world-time-card&category=plugin)
 
-1. Go to **HACS → Frontend**.
-2. Open the menu (⋮) → **Custom repositories**.
-3. Add `https://github.com/korova-sq/world-time-card` with category **Lovelace**.
-4. Install **World Time Card** and reload your browser.
+**Home Assistant 2026.11 or newer** — HACS is now built into Home Assistant as the **Marketplace**:
 
-*(Or just click the **Open in HACS** button above.)*
+1. Open **Settings → Marketplace** and search for **World Time Card**.
+2. Open it and click **Download**.
+3. Reload your browser (hard refresh).
+
+**Older versions (2026.10 or earlier)** — use **HACS**:
+
+1. Open **HACS** and search for **World Time Card**.
+2. Open it and click **Download**.
+3. Reload your browser (hard refresh).
 
 ### Manual
 
@@ -90,7 +100,7 @@ type: custom:world-time-card
 | `dial_color` | color | — | **Dial color**: analog dial fill; digital `card` style: box color |
 | `time_color` | color | — | **Time color**: digital digits, seconds, AM-PM; analog ticks/dots/numbers |
 | **Digital style** | | | |
-| `digital_style` | string | `plain` | `plain` (plain digits) or `card` (hours & minutes in coloured boxes) — local clock only |
+| `digital_style` | string | `plain` | `plain` (plain digits), `card` (hours & minutes in coloured boxes) or `led` (7-segment display with weekdays) — local clock only |
 | **Analog dial** | | | |
 | `dial_detail` | string | `minutes` | `quarters`, `hours` or `minutes` |
 | `dial_markers` | string | `ticks` | `ticks`, `dots`, `disc`, `numbers`, `roman`, `none` |
@@ -101,7 +111,7 @@ type: custom:world-time-card
 | `date_position` | string | `below` | `below` or `above` the clock |
 | `date_color` | color | — | Date text color |
 | **Seconds** | | | |
-| `show_seconds` | boolean | `false` | Show seconds on the local clock |
+| `show_seconds` | boolean | `false` | Show seconds on the local clock (in `led` style: small 7-segment seconds next to the minutes) |
 | `show_seconds_tz` | boolean | `false` | Show seconds on the world clocks |
 | **Element position** *(fine-tuning, in em; 0 = default)* | | | |
 | `h_offset` | number | `0` | Nudge hours up/down |
@@ -113,12 +123,19 @@ type: custom:world-time-card
 | `timezones` | list | `[]` | Up to 2 zones (see below) |
 | `tz_dial_detail` | string | `inherit` | Dial detail for zones (or `inherit` from local) |
 | `tz_dial_markers` | string | `inherit` | Dial style for zones (or `inherit` from local) |
+| **Weather** | | | |
+| `weather_entity` | entity | — | A `weather` entity. Shows condition icon + temperature next to the digital clock. Only with `clock_style: digital` and no secondary time zones |
 | **Background** | | | |
 | `transparent` | boolean | `false` | Remove background, border and shadow |
 | `background_image` | string | — | URL or `/local/…` image |
 | `background_overlay` | number | `0` | Veil over the image: `-1` (lighter) … `0` … `+1` (darker) |
+| `background_inset` | number | `0` | Transparent margin (0–40 px) between the card edge and the custom background (`background_image` / `background_css`). Lets neumorphic / inset themes show their groove. Corner radius follows the card's own radius minus the margin |
 | `background_css` | string | — | Any CSS `background` value (color or gradient) |
 | `light_text` | boolean | `false` | Force light text/markers (useful on dark backgrounds) |
+| **Interaction** | | | |
+| `tap_action` | action | `none` | Action on tap |
+| `hold_action` | action | `none` | Action on hold (500 ms) |
+| `double_tap_action` | action | `none` | Action on double tap |
 
 ### Time zones
 
@@ -133,6 +150,56 @@ Each entry in `timezones` accepts:
 
 > **Note:** the card shows the local clock **plus up to 2 time zones**. In both layouts
 > that means 3 clocks on screen at most.
+
+### LED style
+
+`digital_style: led` draws the time with 7-segment digits. The unlit segments are
+faintly visible, a weekday column sits on the left (the current day is highlighted),
+and AM/PM (12-hour format) goes at the bottom right. With `show_seconds: true`, small
+seconds appear at the top right of the minutes.
+
+The LED colour follows **Time color**, or the theme text color when it is not set.
+On dark backgrounds it switches to a light color automatically.
+
+### Weather block
+
+Set `weather_entity` to show the current condition (outline icon) and temperature next
+to the digital clock. It adapts to the chosen style: a single box in `card` style, a
+7-segment temperature in `led` style. The block is hidden when `clock_style` is
+`analog` or when secondary time zones are shown, to keep the card readable.
+
+```yaml
+type: custom:world-time-card
+clock_style: digital
+digital_style: led
+weather_entity: weather.home
+```
+
+### Interaction
+
+`tap_action`, `hold_action` and `double_tap_action` use the standard Home Assistant
+action format and can be set from the **Interaction** section of the editor:
+
+```yaml
+type: custom:world-time-card
+tap_action:
+  action: navigate
+  navigation_path: /lovelace/clocks
+hold_action:
+  action: more-info
+  entity: weather.home
+double_tap_action:
+  action: url
+  url_path: https://www.timeanddate.com
+```
+
+Supported actions: `none`, `more-info` (with `entity`), `navigate`, `url`,
+`perform-action` and `toggle`. The pointer cursor appears only when an action is set.
+
+### Auto-fit
+
+If the content (for example `xlarge` with weather on a phone) is wider than the card,
+the card reduces its scale until it fits. No configuration is needed.
 
 ---
 
@@ -261,6 +328,8 @@ All variables fall back to the current theme values, so nothing changes until yo
 
 | Variable | What it styles |
 |---|---|
+| `--wc-inset` | Margin set by `background_inset` (set automatically) |
+| `--wc-bg-radius` | Corner radius of the background layer when `background_inset` > 0 (computed automatically) |
 | `--wc-title-color` | Title |
 | `--wc-time-color` | Digital time digits |
 | `--wc-date-color` | Date |
@@ -274,6 +343,12 @@ All variables fall back to the current theme values, so nothing changes until yo
 | `--wc-pin-color` | Center pin |
 | `--wc-box-color` | Digit box background (`digital_style: card`, same as `dial_color`) |
 | `--wc-digit-color` | Digits inside the box (`digital_style: card`, same as `time_color`) |
+| `--wc-date-gap` | Space between time and date (default `8px`) |
+| `--wc-wx-color` | Weather icon and temperature (follows `--wc-time-color` by default) |
+| `--wc-led-color` | LED digits color (`digital_style: led`) |
+| `--wc-led-day-color` | Weekday column in LED style |
+| `--wc-led-off-opacity` | Visibility of unlit segments (default `0.02`) |
+| `--wc-led-glow` | Optional glow, e.g. `drop-shadow(0 0 0.08em #3ddc84)` (off by default) |
 
 ### Element classes (digital)
 
@@ -311,6 +386,25 @@ card_mod:
       --wc-time-color: #ffffff;
       --wc-date-color: rgba(255,255,255,0.85);
       --wc-hand-color: #ffffff;
+    }
+```
+
+**LED, neon green on dark**
+```yaml
+type: custom:world-time-card
+clock_style: digital
+digital_style: led
+show_date: true
+weather_entity: weather.home
+card_mod:
+  style: |
+    ha-card {
+      background: #0b1210;
+      --wc-led-color: #3ddc84;
+      --wc-led-day-color: #7fe3a8;
+      --wc-wx-color: #3ddc84;
+      --wc-date-color: #a7c4b5;
+      --wc-led-glow: drop-shadow(0 0 0.08em #3ddc84);
     }
 ```
 

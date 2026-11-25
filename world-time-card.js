@@ -1,7 +1,7 @@
 /**
  * World Time Card
  * https://github.com/korova-sq/world-time-card
- * Version: 1.2.0
+ * Version: 1.3.0
  *
  * A clean clock card for Home Assistant: choose a digital or analog clock,
  * an optional localized date, and up to two secondary world-clock time
@@ -26,6 +26,9 @@
  *   transparent: false
  *   background_image: null
  *   background_overlay: 0        # -1 chiaro ... 0 ... +1 scuro
+ *   background_inset: 0          # margine trasparente attorno allo sfondo, 0-40 px
+ *   tap_action / hold_action / double_tap_action   # azioni native HA (default: none)
+ *   weather_entity: weather.casa # meteo accanto all'orologio digitale (solo senza fusi orari)
  */
 
 /* Deriva un locale BCP-47 dalla lingua scelta (per i NOMI di giorno/mese).
@@ -41,12 +44,39 @@ function wccResolveLanguage(cfgLang, hass) {
 }
 const WCC_LOCALE = { it: 'it-IT', en: 'en-GB' };
 
+/* ---- 7 segmenti (condivisi tra l'orologio LED e la temperatura LED) ---- */
+// segmenti: a b c d e f g  (cifra larga 50, alta 90)
+const WCC_SEG = ['M6 4.5L10.5 0H39.5L44 4.5L39.5 9H10.5Z',       // a alto
+  'M45.5 6L50 10.5V39.5L45.5 44L41 39.5V10.5Z',                   // b alto dx
+  'M45.5 46L50 50.5V79.5L45.5 84L41 79.5V50.5Z',                  // c basso dx
+  'M6 85.5L10.5 81H39.5L44 85.5L39.5 90H10.5Z',                   // d basso
+  'M4.5 46L9 50.5V79.5L4.5 84L0 79.5V50.5Z',                      // e basso sx
+  'M4.5 6L9 10.5V39.5L4.5 44L0 39.5V10.5Z',                       // f alto sx
+  'M6 45L10.5 40.5H39.5L44 45L39.5 49.5H10.5Z'];                  // g centro
+const WCC_SEG_MAP = { 0: 'abcdef', 1: 'bc', 2: 'abdeg', 3: 'abcdg', 4: 'bcfg', 5: 'acdfg', 6: 'acdefg', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g' };
+function wccDigit(ch, x) {
+  const on = WCC_SEG_MAP[ch] || '';
+  return `<g transform="translate(${x} 0)">` + WCC_SEG.map((d, i) =>
+    `<path class="seg${on.indexOf('abcdefg'[i]) >= 0 ? ' on' : ''}" d="${d}"/>`).join('') + '</g>';
+}
+
+/* ---- icone meteo: ha-icon con le icone mdi di Home Assistant (come calendar-tasks-card) ---- */
+const WCC_WX_MAP = {
+  'clear-night': 'mdi:weather-night', cloudy: 'mdi:weather-cloudy', exceptional: 'mdi:alert-circle-outline',
+  fog: 'mdi:weather-fog', hail: 'mdi:weather-hail', lightning: 'mdi:weather-lightning',
+  'lightning-rainy': 'mdi:weather-lightning-rainy', partlycloudy: 'mdi:weather-partly-cloudy',
+  pouring: 'mdi:weather-pouring', rainy: 'mdi:weather-rainy', snowy: 'mdi:weather-snowy',
+  'snowy-rainy': 'mdi:weather-snowy-rainy', sunny: 'mdi:weather-sunny', windy: 'mdi:weather-windy',
+  'windy-variant': 'mdi:weather-windy-variant',
+};
+
+
 class WorldClockCard extends HTMLElement {
   setConfig(config) {
     this._config = {
       clock_style: 'digital',
       time_format: '24',
-      digital_style: 'plain', // 'plain' | 'card' (riquadri, solo locale)
+      digital_style: 'plain', // 'plain' | 'card' (riquadri, solo locale) | 'led' (7 segmenti, solo locale)
       time_color: null, // colore cifre digitali + indici analogici (ui_color)
       size: 'medium', // 'small' | 'medium' | 'large'
       bold: true,
@@ -76,6 +106,14 @@ class WorldClockCard extends HTMLElement {
       background_css: null, // colore/gradiente CSS libero (usato se non c'e' un'immagine)
       light_text: false, // forza testi/indici chiari (utile su sfondi scuri)
       background_overlay: 0,
+      // margine trasparente (px, 0-40) tra il bordo della card e lo sfondo
+      // personalizzato (immagine/CSS): mostra l'incavatura/ombra del tema.
+      // Il raggio degli angoli dello sfondo segue quello della card meno il margine.
+      background_inset: 0,
+      // azioni native di Home Assistant (nessuna di default)
+      tap_action: { action: 'none' },
+      hold_action: { action: 'none' },
+      double_tap_action: { action: 'none' },
       // regolazioni fini di posizione (in em; 0 = default). Servono a centrare
       // ogni elemento nel suo eventuale riquadro (card-mod) o a compensare il font.
       h_offset: 0, m_offset: 0, colon_offset: 0, tail_offset: 0,
@@ -86,9 +124,11 @@ class WorldClockCard extends HTMLElement {
     if (!this.shadowRoot) {
       this.attachShadow({ mode: 'open' });
       this._buildStaticDOM();
+      this._bindActions();
     }
     this._appliedStyle = null; // forza (ri)costruzione del blocco orologio
     this._applyConfig();
+    this._observeCard();
     this._tick();
   }
 
@@ -100,8 +140,104 @@ class WorldClockCard extends HTMLElement {
     this._startTick();
   }
 
-  connectedCallback() { this._startTick(); }
-  disconnectedCallback() { this._stopTick(); }
+  connectedCallback() { this._startTick(); this._observeCard(); }
+  disconnectedCallback() {
+    this._stopTick();
+    if (this._ro) { this._ro.disconnect(); this._ro = null; }
+  }
+
+  /* ---- azioni native HA: tocco / pressione prolungata / doppio tocco ---- */
+  _bindActions() {
+    const card = this.shadowRoot.querySelector('ha-card');
+    if (!card) return;
+    let holdTimer = null;
+    let held = false;
+    let clickTimer = null;
+    const cancelHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+
+    card.addEventListener('pointerdown', () => {
+      held = false;
+      if (!this._hasAction('hold_action')) return;
+      cancelHold();
+      holdTimer = setTimeout(() => { held = true; this._runAction('hold_action'); }, 500);
+    });
+    card.addEventListener('pointerup', cancelHold);
+    card.addEventListener('pointercancel', cancelHold);
+    card.addEventListener('pointerleave', cancelHold);
+
+    card.addEventListener('click', () => {
+      if (held) { held = false; return; }
+      if (!this._hasAction('double_tap_action')) {
+        this._runAction('tap_action'); // senza doppio tocco: risposta immediata
+        return;
+      }
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        this._runAction('double_tap_action');
+      } else {
+        clickTimer = setTimeout(() => { clickTimer = null; this._runAction('tap_action'); }, 250);
+      }
+    });
+  }
+
+  _hasAction(which) {
+    const a = this._config && this._config[which];
+    return !!(a && a.action && a.action !== 'none');
+  }
+
+  _runAction(which) {
+    const a = this._config && this._config[which];
+    if (a) this._handleAction(a);
+  }
+
+  _handleAction(action) {
+    const type = action.action || 'none';
+    if (type === 'none') return;
+
+    if (type === 'more-info') {
+      const entityId = action.entity;
+      if (!entityId) return;
+      this.dispatchEvent(new CustomEvent('hass-more-info', {
+        bubbles: true, composed: true, detail: { entityId },
+      }));
+      return;
+    }
+
+    if (type === 'navigate') {
+      if (!action.navigation_path) return;
+      history.pushState(null, '', action.navigation_path);
+      window.dispatchEvent(new Event('location-changed', { bubbles: true, composed: true }));
+      return;
+    }
+
+    if (type === 'url') {
+      if (action.url_path) window.open(action.url_path, action.new_tab === false ? '_self' : '_blank');
+      return;
+    }
+
+    if ((type === 'call-service' || type === 'perform-action') && this._hass) {
+      const svc = action.service || action.perform_action;
+      if (!svc || !svc.includes('.')) return;
+      const [domain, service] = svc.split('.', 2);
+      this._hass.callService(domain, service, action.data || action.service_data || {}, action.target || {});
+      return;
+    }
+
+    if (type === 'toggle' && this._hass) {
+      const entityId = action.entity;
+      if (entityId) this._hass.callService('homeassistant', 'toggle', { entity_id: entityId });
+    }
+  }
+
+  /* ricalcola il raggio del livello sfondo quando la card cambia misura/tema */
+  _observeCard() {
+    if (this._ro || typeof ResizeObserver === 'undefined' || !this.shadowRoot) return;
+    const card = this.shadowRoot.querySelector('ha-card');
+    if (!card) return;
+    this._ro = new ResizeObserver(() => { this._updateBgRadius(); this._fit(); });
+    this._ro.observe(card);
+  }
 
   _startTick() {
     if (this._timer) return;
@@ -178,6 +314,19 @@ class WorldClockCard extends HTMLElement {
         ha-card.bg-dark .wc-analog .wc-disc-num { fill: #f3f3f3; }
         ha-card.bg-dark .wc-analog .wc-face { fill: rgba(255,255,255,0.06); }
 
+        /* --- inset: lo sfondo personalizzato vive in un livello staccato dai bordi,
+           cosi' resta visibile lo sfondo/incavatura del tema nel margine --- */
+        ha-card.has-inset { isolation: isolate; }
+        ha-card.actionable { cursor: pointer; }
+        .wc-bg {
+          display: none; position: absolute; pointer-events: none; z-index: -1;
+          top: var(--wc-inset, 0px); right: var(--wc-inset, 0px);
+          bottom: var(--wc-inset, 0px); left: var(--wc-inset, 0px);
+          border-radius: var(--wc-bg-radius, 0px);
+          background-size: cover; background-position: center; background-repeat: no-repeat;
+        }
+        ha-card.has-inset .wc-bg { display: block; }
+
         .wc-title {
           font-size: calc(1.7em * var(--wc-scale)); font-weight: 600;
           color: var(--wc-title-color, var(--primary-text-color)); text-align: center;
@@ -236,13 +385,119 @@ class WorldClockCard extends HTMLElement {
         .wc-time .wc-h { transform: translateY(var(--wc-h-offset, 0em)); }
         .wc-time .wc-m { transform: translateY(var(--wc-m-offset, 0em)); }
         .wc-time .wc-tail { display: grid; grid-template-rows: 1fr 1fr; align-self: stretch; justify-items: start; margin-left: 0.05em; line-height: 1.1; transform: translateY(var(--wc-tail-offset, 0em)); }
-        .wc-time .wc-colon { align-self: center; transform: translateY(calc(-0.14em + var(--wc-colon-offset, 0em))); }
+        /* due punti centrati sull'altezza delle cifre.
+           Riserva (browser senza text-box-trim): correzione fissa tarata su Roboto. */
+        .wc-time .wc-colon { align-self: center; transform: translateY(calc(-0.086em + var(--wc-colon-offset, 0em))); }
+        /* Automatica: caselle tagliate sull'altezza reale di cifre e due punti (qualsiasi font) */
+        @supports (text-box: trim-both cap alphabetic) {
+          .wc-time .wc-h, .wc-time .wc-m { line-height: 1; text-box: trim-both cap alphabetic; }
+          .wc-time .wc-colon {
+            line-height: 1; text-box: trim-both ex alphabetic;
+            transform: translateY(calc(0.005em + var(--wc-colon-offset, 0em)));
+          }
+        }
         /* stile "scheda": riquadri colorati su ore/minuti, due punti col colore del riquadro */
         .wc-time.is-card .wc-h, .wc-time.is-card .wc-m { background: var(--wc-box-color, #78828c); color: var(--wc-digit-color, inherit); border-radius: 0.13em; padding: 0.1em 0.16em; }
         .wc-time.is-card .wc-sec, .wc-time.is-card .wc-ampm { color: var(--wc-digit-color, inherit); }
         .wc-time.is-card .wc-colon { color: var(--wc-box-color, #78828c); }
+        /* schede: centratura delle cifre nel riquadro.
+           Riserva (browser senza text-box-trim): piccola correzione fissa. */
+        .wc-time.is-card .wc-h, .wc-time.is-card .wc-m { padding: 0.118em calc(0.16em + 1px) 0.082em 0.16em; }
+        .wc-time.is-card .wc-colon { transform: translateY(calc(-0.065em + var(--wc-colon-offset, 0em))); }
+        /* Automatica: la casella del testo viene tagliata sull'altezza reale delle cifre
+           (e dei due punti), quindi i margini sopra/sotto sono uguali con qualsiasi font. */
+        @supports (text-box: trim-both cap alphabetic) {
+          .wc-time.is-card .wc-h, .wc-time.is-card .wc-m {
+            line-height: 1; text-box: trim-both cap alphabetic;
+            padding: 0.08em calc(0.16em + 1px) 0.08em 0.16em;
+          }
+          .wc-time.is-card .wc-colon {
+            line-height: 1; text-box: trim-both ex alphabetic;
+            transform: translate(-0.5px, calc(0.005em + var(--wc-colon-offset, 0em)));
+          }
+        }
         .wc-time .wc-sec { grid-row: 1; align-self: center; font-size: 0.35em; font-weight: 600; opacity: 0.45; font-variant-numeric: tabular-nums; }
         .wc-time .wc-ampm { grid-row: 2; align-self: center; font-size: 0.34em; font-weight: 600; opacity: 0.7; }
+
+        /* colore risolto del LED (cifre, giorno attuale, AM/PM, meteo) */
+        .wc-time.is-led, .wc-weather.is-led { --wc-led-res: var(--wc-led-color, var(--wc-time-color, var(--primary-text-color))); }
+        /* testo chiaro / velo scuro: LED e meteo si schiariscono come l'orario normale */
+        ha-card.bg-dark .wc-time.is-led, ha-card.bg-dark .wc-weather.is-led { --wc-led-res: var(--wc-led-color, var(--wc-time-color, #f3f3f3)); }
+        ha-card.bg-dark .wc-time.is-led .wc-led-days { color: var(--wc-led-day-color, rgba(243, 243, 243, 0.65)); }
+        ha-card.bg-dark .wc-weather { color: var(--wc-wx-color, var(--wc-time-color, #f3f3f3)); }
+        ha-card.bg-dark .wc-weather.is-card { color: var(--wc-digit-color, var(--wc-time-color, #f3f3f3)); }
+        ha-card.bg-dark .wc-weather.is-led { color: var(--wc-led-res); }
+
+        /* stile "led": cifre a 7 segmenti (solo orologio locale), giorni a sinistra, AM/PM in basso */
+        .wc-time.is-led {
+          line-height: 1; letter-spacing: 0; font-weight: 600;
+          display: inline-flex; align-items: center; justify-content: center; gap: 0.126em;
+          --wc-led-h: 1.08em; /* era 1.7em: LED ridotto del 30% e poi di un altro 10% */
+        }
+        .wc-time.is-led .wc-led-days {
+          display: flex; flex-direction: column; justify-content: space-between;
+          /* 7 righe che stanno sempre dentro l'altezza delle cifre (niente minimo in px:
+             farebbe sporgere la colonna e sposterebbe meteo e cifre) */
+          align-self: stretch; font-size: 0.148em; line-height: 1; text-align: left;
+          color: var(--wc-led-day-color, var(--secondary-text-color));
+        }
+        .wc-time.is-led .wc-led-day.on { color: var(--wc-led-res); font-weight: 700; }
+        .wc-time.is-led .wc-led-svg {
+          height: var(--wc-led-h); width: auto; display: block; overflow: visible;
+          /* bagliore spento di default: es. --wc-led-glow: drop-shadow(0 0 0.08em #3ddc3d) */
+          filter: var(--wc-led-glow, none);
+        }
+        .wc-time.is-led .wc-led-svg .seg { fill: var(--wc-led-res); opacity: var(--wc-led-off-opacity, 0.02); }
+        .wc-time.is-led .wc-led-svg .seg.on { opacity: 1; }
+        .wc-time.is-led .wc-led-tail {
+          display: flex; flex-direction: column; align-items: flex-start; align-self: stretch;
+        }
+        .wc-time.is-led .wc-led-sec { height: calc(var(--wc-led-h) * 0.4); width: auto; display: block; overflow: visible; opacity: 0.55; }
+        .wc-time.is-led .wc-led-sec .seg { fill: var(--wc-led-res); opacity: var(--wc-led-off-opacity, 0.02); }
+        .wc-time.is-led .wc-led-sec .seg.on { opacity: 1; }
+        .wc-time.is-led .wc-led-tail .wc-led-ampm { align-self: flex-start; margin-top: auto; }
+        .wc-time.is-led .wc-led-ampm {
+          align-self: flex-end; font-size: max(0.162em, 8px); font-weight: 700; line-height: 1; letter-spacing: 0.04em;
+          color: var(--wc-led-res);
+        }
+
+        /* --- meteo accanto all'orologio digitale (icona piena + temperatura) --- */
+        .wc-timerow { display: inline-flex; align-items: flex-end; justify-content: center; gap: clamp(8px, 2.5vw, 22px); }
+        .wc-weather {
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.12em;
+          font-size: calc(clamp(1.7em, 11vw, 3.4em) * var(--wc-scale));
+          color: var(--wc-wx-color, var(--wc-time-color, var(--primary-text-color)));
+        }
+        /* altezza esplicita: senza, la riga di testo di ha-icon lo rende piu' alto dell'icona */
+        .wc-wx-icon { --mdc-icon-size: 0.44em; display: flex; width: 0.44em; height: 0.44em; line-height: 0; flex: 0 0 auto; }
+        /* le icone mdi hanno un bordo vuoto: le alzo perche' il disegno parta a filo delle cifre */
+        .wc-weather:not(.is-led) .wc-wx-icon { margin-top: -0.07em; }
+        /* normale: base del testo a filo con la base delle cifre */
+        .wc-wx-temp { font-size: 0.26em; flex: 0 0 auto; font-weight: 700; line-height: 1; white-space: nowrap; transform: translateY(var(--wc-wx-temp-shift, 0.14em)); }
+        /* normale e schede: il meteo sta tutto dentro l'altezza delle cifre
+           (icona a filo in alto, temperatura a filo in basso) */
+        .wc-weather:not(.is-led) { align-self: stretch; justify-content: space-between; gap: 0; }
+        /* schede: un solo riquadro (come ore e minuti) con icona e temperatura dentro */
+        .wc-weather.is-card {
+          background: var(--wc-box-color, #78828c); color: var(--wc-digit-color, var(--wc-time-color, var(--primary-text-color)));
+          border-radius: 0.13em; padding: 0.028em 0.14em 0.072em; box-sizing: border-box;
+          justify-content: center; gap: 0.02em;
+        }
+        .wc-weather.is-card .wc-wx-icon { --mdc-icon-size: 0.44em; width: 0.44em; height: 0.44em; margin-top: 0; }
+        .wc-weather.is-card .wc-wx-temp { font-size: 0.28em; transform: none; }
+        .wc-weather.is-led {
+          color: var(--wc-led-res);
+          flex-direction: column; justify-content: space-between; align-items: center;
+          height: var(--wc-led-h, 1.08em); gap: 0;
+          /* ancora il bordo inferiore del meteo al bordo inferiore delle cifre
+             (dove sta AM/PM), indipendentemente da come ha-icon si disegna */
+          align-self: flex-end;
+        }
+        /* ha-icon: senza altezza esplicita la sua riga di testo lo rende piu' alto di 1em
+           e spinge la temperatura sotto le cifre */
+        .wc-weather.is-led .wc-wx-icon { --mdc-icon-size: 0.63em; width: 0.63em; height: 0.63em; color: inherit; }
+        /* base del testo a filo con la base delle cifre */
+        .wc-weather.is-led .wc-wx-temp { font-size: 0.378em; flex: 0 0 auto; transform: translateY(var(--wc-wx-temp-shift, 0.14em)); }
 
         /* --- orologio analogico --- */
         .wc-analog svg { width: 100%; height: 100%; display: block; }
@@ -279,11 +534,12 @@ class WorldClockCard extends HTMLElement {
         }
         .wc-unit.sub .wc-date { font-size: calc(0.8em * var(--wc-scale)); }
         /* un po' di respiro tra l'orologio principale e la data sotto */
-        .wc-unit.main .wc-date { margin-top: 6px; }
-        .wc-unit.main .wc-date.above { margin-top: 0; margin-bottom: 6px; }
+        .wc-unit.main .wc-date { margin-top: calc(var(--wc-date-gap, 8px) - 4px); }
+        .wc-unit.main .wc-date.above { margin-top: 0; margin-bottom: calc(var(--wc-date-gap, 8px) - 4px); }
         /* data a piena larghezza sopra/sotto la fila (layout riga) */
-        .wc-date-standalone { width: 100%; margin-top: 4px; }
-        .wc-date-standalone.above { width: 100%; margin-bottom: 4px; }
+        /* distanza ora-data: --wc-date-gap (8px; prima erano 14px). I 10px tolti sono il gap del ha-card */
+        .wc-date-standalone { width: 100%; margin-top: calc(var(--wc-date-gap, 8px) - 10px); }
+        .wc-date-standalone.above { width: 100%; margin-top: 0; margin-bottom: calc(var(--wc-date-gap, 8px) - 10px); }
         /* grassetto disattivato: pesi normali su orario, secondi, data, nomi fusi, titolo */
         ha-card.wc-no-bold .wc-unit .wc-time { font-weight: 400; }
         ha-card.wc-no-bold .wc-time .wc-sec { font-weight: 400; }
@@ -292,6 +548,7 @@ class WorldClockCard extends HTMLElement {
         ha-card.wc-no-bold .wc-title { font-weight: 400; }
       </style>
       <ha-card>
+        <div class="wc-bg"></div>
         <div class="wc-title"></div>
         <div class="wc-stage"></div>
       </ha-card>
@@ -341,6 +598,7 @@ class WorldClockCard extends HTMLElement {
       mode, layout, date: c.show_date !== false,
       datePos: c.date_position || 'below',
       dstyle: c.digital_style || 'plain',
+      wx: (c.weather_entity && mode === 'digital' && tzList.length === 0) ? String(c.weather_entity) : '',
       timeColor: c.time_color ? String(c.time_color) : '',
       dateColor: c.date_color ? String(c.date_color) : '',
       detail: c.dial_detail || 'minutes',
@@ -358,6 +616,8 @@ class WorldClockCard extends HTMLElement {
     }
 
     this._applyBackground(cardEl);
+    cardEl.classList.toggle('actionable',
+      this._hasAction('tap_action') || this._hasAction('hold_action') || this._hasAction('double_tap_action'));
   }
 
   /* costruisce il palco: unita' locale (main) + eventuali fusi (sub) */
@@ -376,6 +636,8 @@ class WorldClockCard extends HTMLElement {
     const showDate = this._config.show_date !== false;
     const datePos = this._config.date_position === 'above' ? 'above' : 'below';
     const localColor = this._config.dial_color;
+    // meteo: solo orologio digitale, locale, senza fusi orari secondari
+    const weatherOn = !!this._config.weather_entity && mode === 'digital' && tzList.length === 0;
     const mkSub = (z) => this._buildUnit({
       mode, main: false, tz: z.tz,
       label: z.label || z.tz.split('/').pop().replace(/_/g, ' '),
@@ -384,7 +646,7 @@ class WorldClockCard extends HTMLElement {
 
     if (layout === 'split') {
       // affiancato: locale grande a sinistra (con data sopra/sotto), fusi impilati a destra
-      const mainUnit = this._buildUnit({ mode, main: true, tz: null, label: '', showDate, datePos, dialColor: localColor });
+      const mainUnit = this._buildUnit({ mode, main: true, tz: null, label: '', showDate, datePos, dialColor: localColor, weather: weatherOn });
       stage.appendChild(mainUnit.el);
       this._units.push(mainUnit);
       if (tzList.length) {
@@ -400,7 +662,7 @@ class WorldClockCard extends HTMLElement {
       // riga: sempre max 3 orologi — un fuso a sx, locale al centro, un fuso a dx.
       // La data NON va sotto il solo locale (allargherebbe la colonna centrale e
       // spingerebbe i fusi), ma su una riga a piena larghezza sopra/sotto la fila.
-      const mainUnit = this._buildUnit({ mode, main: true, tz: null, label: '', showDate: false, dialColor: localColor });
+      const mainUnit = this._buildUnit({ mode, main: true, tz: null, label: '', showDate: false, dialColor: localColor, weather: weatherOn });
       const rowTz = tzList.slice(0, 2);
       if (rowTz[0]) {
         const u = mkSub(rowTz[0]); this._units.push(u); stage.appendChild(u.el);
@@ -473,7 +735,11 @@ class WorldClockCard extends HTMLElement {
       const tcol = this._toColor(main ? this._config.time_color : opts.timeColor);
       // stile "scheda" (solo locale): riquadri colorati su ore/minuti (Colore quadrante),
       // due punti/cifre/secondi/AM col "Colore orario"
-      if (main && this._config.digital_style === 'card') {
+      const isLed = main && this._config.digital_style === 'led';
+      if (isLed) {
+        t.classList.add('is-led');
+        if (tcol) t.style.setProperty('--wc-led-color', tcol);
+      } else if (main && this._config.digital_style === 'card') {
         t.classList.add('is-card');
         if (col) t.style.setProperty('--wc-box-color', col);
         if (tcol) t.style.setProperty('--wc-digit-color', tcol);
@@ -484,8 +750,25 @@ class WorldClockCard extends HTMLElement {
         // fuso senza "Colore orario" proprio: ripiega sul suo colore quadrante (retro-compatibilita')
         t.style.color = col;
       }
-      unit.appendChild(t);
+      if (main && opts.weather) {
+        const row = document.createElement('div');
+        row.className = 'wc-timerow';
+        row.appendChild(t);
+        const w = document.createElement('div');
+        w.className = 'wc-weather' + (isLed ? ' is-led' : (this._config.digital_style === 'card' ? ' is-card' : ''));
+        if (isLed) { if (tcol) w.style.setProperty('--wc-led-color', tcol); }
+        else if (this._config.digital_style === 'card') {
+          if (col) w.style.setProperty('--wc-box-color', col);
+          if (tcol) w.style.setProperty('--wc-digit-color', tcol);
+        } else if (tcol) w.style.setProperty('--wc-wx-color', tcol);
+        row.appendChild(w);
+        unit.appendChild(row);
+        u.weatherEl = w;
+      } else {
+        unit.appendChild(t);
+      }
       u.timeEl = t;
+      u.led = isLed;
     }
 
     if (showDate && !above) mkDate();
@@ -500,6 +783,25 @@ class WorldClockCard extends HTMLElement {
     const hasCss = !hasBg && !!cssBg; // il CSS agisce solo se non c'e' un'immagine
     const wantTransparent = this._config.transparent === true && !hasBg && !hasCss;
     cardEl.classList.toggle('transparent', wantTransparent);
+
+    // inset: con un margine > 0 lo sfondo personalizzato passa dal ha-card a un
+    // livello interno (.wc-bg) staccato dai bordi. A 0 resta il percorso classico.
+    let inset = Number(this._config.background_inset);
+    if (!isFinite(inset)) inset = 0;
+    inset = Math.min(Math.max(inset, 0), 40);
+    const useLayer = inset > 0 && (hasBg || hasCss);
+    const cardBg = !useLayer && hasBg;   // sfondo immagine dipinto sul ha-card
+    const cardCss = !useLayer && hasCss; // sfondo CSS dipinto sul ha-card
+
+    // velo sull'immagine
+    let ov = Number(this._config.background_overlay);
+    if (!isFinite(ov)) ov = 0;
+    ov = Math.min(Math.max(ov, -1), 1);
+    const dark = ov > 0;
+    const op = Math.abs(ov);
+    const veil = dark ? `rgba(0, 0, 0, ${op})` : `rgba(255, 255, 255, ${op})`;
+    const bgUrl = hasBg ? String(bg).trim().replace(/["\\\r\n]/g, '') : '';
+    const imageBg = `linear-gradient(${veil}, ${veil}), url("${bgUrl}")`;
 
     const forced = [
       ['background', 'transparent'],
@@ -520,29 +822,21 @@ class WorldClockCard extends HTMLElement {
       forced.forEach(([p, v]) => cardEl.style.setProperty(p, v, 'important'));
     } else {
       forced.forEach(([p]) => {
-        if (hasBg && (p === 'background' || p === 'background-image' || p === 'background-color')) return;
-        if (hasCss && (p === 'background' || p === 'background-image' || p === 'background-color')) return;
+        if (cardBg && (p === 'background' || p === 'background-image' || p === 'background-color')) return;
+        if (cardCss && (p === 'background' || p === 'background-image' || p === 'background-color')) return;
         cardEl.style.removeProperty(p);
       });
     }
 
-    if (hasBg) {
+    if (cardBg) {
       cardEl.classList.remove('has-css-bg');
       cardEl.classList.add('has-bg-image');
       cardEl.style.setProperty('background-color', 'transparent', 'important');
       cardEl.style.setProperty('--ha-card-background', 'transparent', 'important');
       cardEl.style.setProperty('--card-background-color', 'transparent', 'important');
-      let ov = Number(this._config.background_overlay);
-      if (!isFinite(ov)) ov = 0;
-      ov = Math.min(Math.max(ov, -1), 1);
-      const dark = ov > 0;
-      const op = Math.abs(ov);
-      const veil = dark ? `rgba(0, 0, 0, ${op})` : `rgba(255, 255, 255, ${op})`;
-      const bgUrl = String(bg).trim().replace(/["\\\r\n]/g, '');
-      cardEl.style.setProperty('background-image',
-        `linear-gradient(${veil}, ${veil}), url("${bgUrl}")`, 'important');
+      cardEl.style.setProperty('background-image', imageBg, 'important');
       cardEl.classList.toggle('bg-dark', dark && op >= 0.4);
-    } else if (hasCss) {
+    } else if (cardCss) {
       // sfondo CSS libero (colore pieno, gradiente lineare/radiale/conico…)
       cardEl.classList.remove('has-bg-image', 'bg-dark');
       cardEl.classList.add('has-css-bg');
@@ -560,8 +854,50 @@ class WorldClockCard extends HTMLElement {
       }
     }
 
+    // livello inset (solo con margine > 0 e uno sfondo personalizzato)
+    this._applyInsetLayer(cardEl, useLayer ? inset : 0, hasBg ? { image: imageBg } : { css: cssBg });
+    if (useLayer && hasBg) cardEl.classList.toggle('bg-dark', dark && op >= 0.4);
+
     // testo/indici chiari forzati (comodo su sfondi CSS scuri, dove non c'e' overlay)
     if (this._config.light_text === true) cardEl.classList.add('bg-dark');
+  }
+
+  /* applica/toglie il livello sfondo con margine; inset = 0 -> disattivato */
+  _applyInsetLayer(cardEl, inset, layerBg) {
+    const layer = this.shadowRoot.querySelector('.wc-bg');
+    if (!layer) return;
+    if (!inset) {
+      cardEl.classList.remove('has-inset');
+      cardEl.style.removeProperty('--wc-inset');
+      cardEl.style.removeProperty('--wc-bg-radius');
+      layer.style.background = '';
+      layer.style.backgroundImage = '';
+      return;
+    }
+    cardEl.classList.add('has-inset');
+    cardEl.style.setProperty('--wc-inset', inset + 'px');
+    layer.style.background = '';
+    layer.style.backgroundImage = '';
+    if (layerBg.image) layer.style.backgroundImage = layerBg.image;
+    else layer.style.background = layerBg.css;
+    this._updateBgRadius();
+    // al primo render lo stile del tema puo' non essere ancora applicato: ricalcola
+    requestAnimationFrame(() => this._updateBgRadius());
+  }
+
+  /* raggio concentrico: angoli reali della card meno il margine (min 0) */
+  _updateBgRadius() {
+    const cardEl = this.shadowRoot && this.shadowRoot.querySelector('ha-card');
+    if (!cardEl || !cardEl.classList.contains('has-inset')) return;
+    const inset = parseFloat(cardEl.style.getPropertyValue('--wc-inset')) || 0;
+    const cs = getComputedStyle(cardEl);
+    const px = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 12; };
+    const val = [cs.borderTopLeftRadius, cs.borderTopRightRadius,
+      cs.borderBottomRightRadius, cs.borderBottomLeftRadius]
+      .map((v) => Math.max(0, px(v) - inset) + 'px').join(' ');
+    if (cardEl.style.getPropertyValue('--wc-bg-radius') !== val) {
+      cardEl.style.setProperty('--wc-bg-radius', val);
+    }
   }
 
   /* true se il colore risolto e' scuro (e abbastanza opaco da contare) */
@@ -763,6 +1099,7 @@ class WorldClockCard extends HTMLElement {
     this._units.forEach((u) => {
       // I nomi IANA non hanno spazi: ripulisce un copia-incolla "sporco".
       const tz = u.tz ? u.tz.replace(/\s+/g, '') : null;
+      if (u.weatherEl) this._updateWeather(u);
 
       if (u.mode === 'analog' && u.hands) {
         const hms = this._hmsFor(now, tz);
@@ -775,6 +1112,8 @@ class WorldClockCard extends HTMLElement {
           u.hands.s.setAttribute('transform', `rotate(${angS} 50 50)`);
           u.hands.s.style.display = wantSec(u) ? '' : 'none';
         }
+      } else if (u.timeEl && u.led) {
+        this._renderLed(u, now, tz, hour12, loc);
       } else if (u.timeEl) {
         const opts = { hour: '2-digit', minute: '2-digit', hour12 };
         if (wantSec(u)) opts.second = '2-digit';
@@ -812,6 +1151,111 @@ class WorldClockCard extends HTMLElement {
         u.dateEl.textContent = this._dateText(now, loc);
       }
     });
+
+    // riadatta la larghezza solo quando cambia qualcosa che puo' cambiarla
+    const cardEl = this.shadowRoot.querySelector('ha-card');
+    const fitKey = (cardEl ? cardEl.className : '') + '|' + this._sig + '|' + (c.show_seconds === true) + '|'
+      + this._units.map((u) => (u.timeEl ? u.timeEl.textContent : '') + (u.weatherEl ? u.weatherEl.textContent : '')).join('|');
+    if (fitKey !== this._fitKey) { this._fitKey = fitKey; this._fit(); }
+  }
+
+  /* se orologi (+ meteo) sono piu' larghi della card, li rimpicciolisce in proporzione
+     finche' ci stanno; quando lo spazio basta non cambia niente */
+  _fit() {
+    const root = this.shadowRoot;
+    const stage = root && root.querySelector('.wc-stage');
+    const cardEl = root && root.querySelector('ha-card');
+    if (!stage || !cardEl || !stage.firstElementChild) return;
+    stage.style.removeProperty('--wc-scale');
+    const avail = stage.clientWidth;
+    if (!(avail > 0)) return;
+    const kids = Array.from(stage.children);
+    const width = () => {
+      const r = kids.map((k) => k.getBoundingClientRect());
+      return Math.max(...r.map((x) => x.right)) - Math.min(...r.map((x) => x.left));
+    };
+    let need = width();
+    if (need <= avail + 0.5) return;
+    const base = parseFloat(getComputedStyle(cardEl).getPropertyValue('--wc-scale')) || 1;
+    let scale = base;
+    // due passaggi: gli spazi fissi (in px) non si riducono con la scala
+    for (let i = 0; i < 2 && need > avail + 0.5; i++) {
+      scale = Math.max(0.3, scale * (avail / need) * 0.98);
+      stage.style.setProperty('--wc-scale', String(scale));
+      need = width();
+    }
+  }
+
+  /* meteo: icona della condizione + temperatura dall'entita' weather.* */
+  _updateWeather(u) {
+    const ent = this._config.weather_entity;
+    const h = this._hass;
+    const st = h && h.states && ent ? h.states[ent] : null;
+    const ok = !!st && st.state !== 'unavailable' && st.state !== 'unknown';
+    const t = ok && st.attributes ? Number(st.attributes.temperature) : NaN;
+    const tStr = isFinite(t) ? String(Math.round(t)) : '--';
+    const unit = (st && st.attributes && st.attributes.temperature_unit)
+      || (h && h.config && h.config.unit_system && h.config.unit_system.temperature) || '\u00B0C';
+    // condizione non riconosciuta / entita' senza dati: come calendar-tasks-card
+    const icon = ok ? (WCC_WX_MAP[String(st.state).toLowerCase()] || 'mdi:weather-cloudy') : 'mdi:cloud-off-outline';
+    const key = [icon, tStr, unit].join('|');
+    if (u.wxKey === key) return;
+    u.wxKey = key;
+    const unitTxt = tStr === '--' ? '' : unit;
+    u.weatherEl.innerHTML = `<ha-icon class="wc-wx-icon" icon="${icon}"></ha-icon>`
+      + `<div class="wc-wx-temp">${tStr}${unitTxt}</div>`;
+    u.weatherEl.title = ok ? (st.attributes.friendly_name || ent) : ent;
+  }
+
+  /* stile "led": 4 cifre a 7 segmenti + due punti fissi + giorni + AM/PM (niente secondi) */
+  _renderLed(u, now, tz, hour12, loc) {
+    try {
+      const showSec = this._config.show_seconds === true;
+      const o = { hour: '2-digit', minute: '2-digit', hour12 };
+      if (showSec) o.second = '2-digit';
+      if (tz) o.timeZone = tz;
+      const parts = new Intl.DateTimeFormat('en-GB', o).formatToParts(now);
+      let h = '', m = '', ampm = '', sec = '';
+      parts.forEach((p) => {
+        if (p.type === 'hour') h = p.value;
+        else if (p.type === 'minute') m = p.value;
+        else if (p.type === 'second') sec = p.value.padStart(2, '0');
+        else if (p.type === 'dayPeriod') ampm = p.value.toUpperCase();
+      });
+      h = h.padStart(2, '0'); m = m.padStart(2, '0');
+      const secSvg = () => wccDigit(sec[0], 0) + wccDigit(sec[1], 58);
+      const wd = new Intl.DateTimeFormat('en-US', { weekday: 'short', ...(tz ? { timeZone: tz } : {}) }).format(now);
+      const dayIdx = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(wd);
+      const key = [h, m, ampm, dayIdx, loc, hour12, showSec].join('|');
+      if (u.ledKey === key) {
+        // stesso minuto: aggiorna solo i secondi
+        if (showSec) { const se = u.timeEl.querySelector('.wc-led-sec'); if (se) se.innerHTML = secSvg(); }
+        return;
+      }
+      u.ledKey = key;
+
+      // in 12 ore lo zero iniziale resta spento
+      const h1 = (hour12 && h[0] === '0') ? '' : h[0];
+      const svg = `<svg class="wc-led-svg" viewBox="0 0 250 90" aria-hidden="true">`
+        + wccDigit(h1, 0) + wccDigit(h[1], 58)
+        + `<rect class="seg on" x="119" y="27" width="10" height="10"/><rect class="seg on" x="119" y="53" width="10" height="10"/>`
+        + wccDigit(m[0], 142) + wccDigit(m[1], 200) + `</svg>`;
+
+      // giorni (lun..dom) nella lingua scelta, quello attuale evidenziato
+      const days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
+        let n = new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, 0, 1 + i)));
+        n = n.replace(/\.$/, ''); n = n.charAt(0).toUpperCase() + n.slice(1);
+        return `<span class="wc-led-day${i === dayIdx ? ' on' : ''}">${n}</span>`;
+      }).join('');
+
+      u.timeEl.innerHTML = `<span class="wc-led-days">${days}</span>${svg}`
+        // coda a destra come nello stile normale: secondi piccoli in alto, AM/PM in basso
+        + ((showSec || ampm) ? `<span class="wc-led-tail">`
+          + (showSec ? `<svg class="wc-led-sec" viewBox="0 0 108 90" aria-hidden="true">${secSvg()}</svg>` : '')
+          + (ampm ? `<span class="wc-led-ampm">${ampm}</span>` : '') + `</span>` : '');
+    } catch (e) {
+      u.timeEl.textContent = '—';
+    }
   }
 
   /* testo della data secondo il formato scelto */
@@ -856,9 +1300,11 @@ customElements.define('world-time-card', WorldClockCard);
 
 const WCC_EDITOR_I18N = {
   en: {
-    grp_general: 'General', grp_timezones: 'World clocks', grp_appearance: 'Appearance',
+    grp_general: 'General', grp_timezones: 'World clocks', grp_appearance: 'Background', grp_interaction: 'Interaction', grp_weather: 'Weather', weather_entity: 'Weather entity',
+    weather_hint: 'Shown next to the digital clock only when no secondary time zones are set.',
+    tap_behavior: 'Tap behavior', hold_behavior: 'Hold behavior', double_tap_behavior: 'Double tap behavior',
     grp_clock: 'Clock', grp_dial: 'Dial (analog)', grp_datetime: 'Time & date', grp_fine: 'Element position', grp_dial_digital: 'Dial (digital)',
-    digital_style: 'Digital style', ds_plain: 'Normal', ds_card: 'Boxes',
+    digital_style: 'Digital style', ds_plain: 'Normal', ds_card: 'Boxes', ds_led: 'LED',
     pos_hours: 'Hours position', pos_minutes: 'Minutes position', pos_colon: 'Colon position', pos_tail: 'Seconds / AM-PM position',
     title: 'Title (optional)',
     clock_style: 'Clock style', cs_digital: 'Digital', cs_analog: 'Analog',
@@ -885,13 +1331,16 @@ const WCC_EDITOR_I18N = {
     transparent: 'Transparent background',
     background_image: 'Background image (URL or /local/… path)',
     background_css: 'Background (colour / CSS gradient)',
+    background_inset: 'Background inset (px)',
     light_text: 'Light text (for dark backgrounds)',
     overlay: 'Image overlay', ov_light: 'Lighter', ov_dark: 'Darker',
   },
   it: {
-    grp_general: 'Generale', grp_timezones: 'Orologi del mondo', grp_appearance: 'Aspetto',
+    grp_general: 'Generale', grp_timezones: 'Orologi del mondo', grp_appearance: 'Sfondo', grp_interaction: 'Interazione', grp_weather: 'Meteo', weather_entity: 'Entità meteo',
+    weather_hint: "Compare accanto all'orologio digitale solo se non ci sono fusi orari secondari.",
+    tap_behavior: 'Al tocco', hold_behavior: 'Alla pressione prolungata', double_tap_behavior: 'Al doppio tocco',
     grp_clock: 'Orologio', grp_dial: 'Quadrante (analogico)', grp_datetime: 'Ora e data', grp_fine: 'Posizione elementi', grp_dial_digital: 'Quadrante (digitale)',
-    digital_style: 'Stile digitale', ds_plain: 'Normale', ds_card: 'Schede',
+    digital_style: 'Stile digitale', ds_plain: 'Normale', ds_card: 'Schede', ds_led: 'LED',
     pos_hours: 'Posizione ore', pos_minutes: 'Posizione minuti', pos_colon: 'Posizione due punti', pos_tail: 'Posizione secondi / AM-PM',
     title: 'Titolo (opzionale)',
     clock_style: 'Stile orologio', cs_digital: 'Digitale', cs_analog: 'Analogico',
@@ -918,6 +1367,7 @@ const WCC_EDITOR_I18N = {
     transparent: 'Sfondo trasparente',
     background_image: 'Immagine di sfondo (URL o percorso /local/…)',
     background_css: 'Sfondo (colore / gradiente CSS)',
+    background_inset: 'Margine sfondo (px)',
     light_text: 'Testo chiaro (per sfondi scuri)',
     overlay: 'Velo sull\'immagine', ov_light: 'Più chiaro', ov_dark: 'Più scuro',
   },
@@ -946,6 +1396,8 @@ class WorldClockCardEditor extends HTMLElement {
       this._fillFineForm();
       this._fillTimezonesForm();
       this._fillAppearanceForm();
+      this._fillWeatherForm();
+      this._fillInteractionForm();
     }
   }
 
@@ -1062,6 +1514,7 @@ class WorldClockCardEditor extends HTMLElement {
       { name: 'digital_style', selector: sel([
         { value: 'plain', label: this.t('ds_plain') },
         { value: 'card', label: this.t('ds_card') },
+        { value: 'led', label: this.t('ds_led') },
       ]) },
     ];
     form.computeLabel = () => this.t('digital_style');
@@ -1304,6 +1757,60 @@ class WorldClockCardEditor extends HTMLElement {
     if (slots) slots.style.display = this._config.show_timezones ? '' : 'none';
   }
 
+  _fillWeatherForm() {
+    if (!this.shadowRoot) return;
+    const mount = this.shadowRoot.getElementById('weather-form');
+    if (!mount || mount.dataset.filled) return;
+    const form = document.createElement('ha-form');
+    form.hass = this._hass;
+    form.data = { weather_entity: this._config.weather_entity || '' };
+    form.schema = [{ name: 'weather_entity', selector: { entity: { domain: 'weather' } } }];
+    form.computeLabel = () => this.t('weather_entity');
+    form.computeHelper = () => this.t('weather_hint');
+    form.addEventListener('value-changed', (e) => {
+      const v = e.detail.value || {};
+      this._set('weather_entity', v.weather_entity || undefined);
+    });
+    mount.appendChild(form);
+    mount.dataset.filled = '1';
+  }
+
+  _fillInteractionForm() {
+    if (!this.shadowRoot) return;
+    const mount = this.shadowRoot.getElementById('interaction-form');
+    if (!mount || mount.dataset.filled) return;
+    const c = this._config;
+
+    const form = document.createElement('ha-form');
+    form.hass = this._hass;
+    form.data = {
+      tap_action: c.tap_action || { action: 'none' },
+      hold_action: c.hold_action || { action: 'none' },
+      double_tap_action: c.double_tap_action || { action: 'none' },
+    };
+    form.schema = [
+      { name: 'tap_action', selector: { ui_action: {} } },
+      { name: 'hold_action', selector: { ui_action: {} } },
+      { name: 'double_tap_action', selector: { ui_action: {} } },
+    ];
+    const labels = {
+      tap_action: this.t('tap_behavior'),
+      hold_action: this.t('hold_behavior'),
+      double_tap_action: this.t('double_tap_behavior'),
+    };
+    form.computeLabel = (s) => labels[s.name] || s.name;
+    form.addEventListener('value-changed', (e) => {
+      const v = e.detail.value || {};
+      ['tap_action', 'hold_action', 'double_tap_action'].forEach((k) => {
+        const a = v[k];
+        // 'none' = default: non salvare nello YAML
+        this._set(k, a && a.action && a.action !== 'none' ? a : undefined);
+      });
+    });
+    mount.appendChild(form);
+    mount.dataset.filled = '1';
+  }
+
   _fillAppearanceForm() {
     if (!this.shadowRoot) return;
     const mount = this.shadowRoot.getElementById('appearance-form');
@@ -1316,18 +1823,21 @@ class WorldClockCardEditor extends HTMLElement {
       transparent: c.transparent === true,
       background_image: c.background_image || '',
       background_css: c.background_css || '',
+      background_inset: Number(c.background_inset) || 0,
       light_text: c.light_text === true,
     };
     form.schema = [
       { name: 'transparent', selector: { boolean: {} } },
       { name: 'background_image', selector: { text: {} } },
       { name: 'background_css', selector: { text: {} } },
+      { name: 'background_inset', selector: { number: { min: 0, max: 40, step: 1, mode: 'box' } } },
       { name: 'light_text', selector: { boolean: {} } },
     ];
     const labels = {
       transparent: this.t('transparent'),
       background_image: this.t('background_image'),
       background_css: this.t('background_css'),
+      background_inset: this.t('background_inset'),
       light_text: this.t('light_text'),
     };
     form.computeLabel = (s) => labels[s.name] || s.name;
@@ -1336,6 +1846,7 @@ class WorldClockCardEditor extends HTMLElement {
       this._set('transparent', v.transparent === true ? true : undefined);
       this._set('background_image', v.background_image || undefined);
       this._set('background_css', v.background_css || undefined);
+      this._set('background_inset', Number(v.background_inset) > 0 ? Number(v.background_inset) : undefined);
       this._set('light_text', v.light_text === true ? true : undefined);
       this._updateOverlayVisibility();
     });
@@ -1502,6 +2013,14 @@ class WorldClockCardEditor extends HTMLElement {
             </div>
           </div>
         </details>
+        <details class="group">
+          <summary>${this.t('grp_weather')}</summary>
+          <div class="grp-body"><div id="weather-form"></div></div>
+        </details>
+        <details class="group">
+          <summary>${this.t('grp_interaction')}</summary>
+          <div class="grp-body"><div id="interaction-form"></div></div>
+        </details>
       </div>
     `;
 
@@ -1515,6 +2034,8 @@ class WorldClockCardEditor extends HTMLElement {
     this._fillFineForm();
     this._fillTimezonesForm();
     this._fillAppearanceForm();
+    this._fillWeatherForm();
+    this._fillInteractionForm();
   }
 }
 
@@ -1529,7 +2050,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c WORLD-TIME-CARD %c 1.2.0 ',
+  '%c WORLD-TIME-CARD %c 1.3.0 ',
   'color: white; background: #3b7dd8; font-weight: 700;',
   'color: #3b7dd8; background: #1c1c1c; font-weight: 700;'
 );
